@@ -93,6 +93,45 @@ async function loadAll() {
   }
 }
 
+const addressCache = {};
+
+async function loadAddresses(recordsToResolve) {
+  for (const r of recordsToResolve) {
+    const key = `${r.lat.toFixed(4)},${r.lng.toFixed(4)}`;
+    const el = document.getElementById(`addr_${r.id}`);
+    if (!el) continue;
+
+    if (addressCache[key]) {
+      el.textContent = `📍 ${addressCache[key]}`;
+      continue;
+    }
+
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${r.lat}&lon=${r.lng}&zoom=18&addressdetails=1`,
+        { headers: { "Accept-Language": "fr" } }
+      );
+      const data = await res.json();
+      const a = data.address || {};
+      const parts = [
+        [a.house_number, a.road].filter(Boolean).join(" "),
+        a.neighbourhood || a.suburb,
+        a.city || a.town || a.village || a.county,
+      ].filter(Boolean);
+      const label = parts.length ? parts.join(", ") : (data.display_name || "Adresse introuvable");
+      addressCache[key] = label;
+      if (document.getElementById(`addr_${r.id}`)) {
+        document.getElementById(`addr_${r.id}`).textContent = `📍 ${label}`;
+      }
+    } catch (e) {
+      if (document.getElementById(`addr_${r.id}`)) {
+        document.getElementById(`addr_${r.id}`).textContent = "📍 Adresse indisponible";
+      }
+    }
+    await new Promise(res => setTimeout(res, 300));
+  }
+}
+
 function render() {
   const todayStr = todayKey(new Date().toISOString());
   const todayRecords = records.filter(r => todayKey(r.ts) === todayStr);
@@ -126,20 +165,23 @@ function render() {
   } else {
     historyBox.innerHTML = allSorted.map(r => {
       const emp = employees.find(e => e.id === r.employeeId);
+      const addrId = `addr_${r.id}`;
       return `
-        <div class="row">
+        <div class="row" style="align-items:flex-start;">
           <div>
             <span class="dot ${r.type}"></span>
             <strong>${emp ? emp.name : "Employé supprimé"}</strong>
             <span class="sub">${r.type === "in" ? "arrivée" : "départ"}</span>
+            <div id="${addrId}" class="sub" style="margin-top:2px; max-width:320px;">📍 Recherche de l'adresse…</div>
           </div>
           <div style="text-align:right;">
             <div class="mono sub">${fmtDate(r.ts)} · ${fmtTime(r.ts)}</div>
-            <a class="maplink" target="_blank" href="https://www.google.com/maps?q=${r.lat},${r.lng}">📍 carte</a>
+            <a class="maplink" target="_blank" href="https://www.google.com/maps?q=${r.lat},${r.lng}">🗺 voir sur la carte</a>
           </div>
         </div>
       `;
     }).join("");
+    loadAddresses(allSorted.slice(0, 25));
   }
 
   checkAbsences(presentIds, todayStr);
