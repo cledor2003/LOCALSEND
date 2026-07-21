@@ -35,7 +35,6 @@ function randomPin() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
-// --- Employees ---
 app.get("/api/employees", (req, res) => {
   const db = readDB();
   res.json(db.employees);
@@ -62,7 +61,6 @@ app.delete("/api/employees/:id", (req, res) => {
   res.json({ ok: true });
 });
 
-// --- Records (pointages) ---
 app.get("/api/records", (req, res) => {
   const db = readDB();
   res.json(db.records);
@@ -95,7 +93,6 @@ app.post("/api/records", (req, res) => {
   res.json(record);
 });
 
-// --- Settings ---
 app.get("/api/settings", (req, res) => {
   const db = readDB();
   res.json({ startTime: db.startTime || "08:00" });
