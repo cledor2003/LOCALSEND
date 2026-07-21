@@ -9,7 +9,15 @@ const DB_PATH = path.join(__dirname, "data", "db.json");
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
+function ensureDataDir() {
+  const dir = path.dirname(DB_PATH);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
 function readDB() {
+  ensureDataDir();
   if (!fs.existsSync(DB_PATH)) {
     const initial = { employees: [], records: [], startTime: "08:00" };
     fs.writeFileSync(DB_PATH, JSON.stringify(initial, null, 2));
@@ -19,6 +27,7 @@ function readDB() {
 }
 
 function writeDB(db) {
+  ensureDataDir();
   fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
 }
 
