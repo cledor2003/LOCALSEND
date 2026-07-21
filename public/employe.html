@@ -9,9 +9,9 @@
 <body>
 <div class="wrap">
   <div class="header">
-    <div class="logo">⏱</div>
+    <div class="logo"><img src="/logo.svg" alt="Logo AKSAM" /></div>
     <div>
-      <h1>Pointage</h1>
+      <h1>AKSAM — Pointage</h1>
       <p>Enregistre ton arrivée et ton départ</p>
     </div>
   </div>
@@ -180,7 +180,6 @@ function geoErrorMessage(err) {
 
 async function submitPointage(pos) {
   const emp = employees.find(e => e.id === currentEmployeeId);
-  const pin = document.getElementById("pinInput").value || (pinUnlocked ? lastValidPin : "");
   try {
     const res = await fetch("/api/records", {
       method: "POST",
@@ -218,7 +217,7 @@ function setBusy(isBusy) {
 document.getElementById("pointBtn").onclick = () => {
   const emp = employees.find(e => e.id === currentEmployeeId);
   if (!emp || !pinUnlocked) return;
-  currentPin = emp.pin; // already verified client-side, sent for server-side check too
+  currentPin = emp.pin;
   clearError();
   setBusy(true);
 
