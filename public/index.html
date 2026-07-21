@@ -3,24 +3,41 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>PointageDistance</title>
+<title>AKSAM — PointageDistance</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 <div class="wrap">
-  <div class="header">
-    <div class="logo">⏱</div>
-    <div>
-      <h1>PointageDistance</h1>
-      <p>Suivi de présence par géolocalisation</p>
+
+  <div class="hero">
+    <div class="hero-mark">
+      <img src="/logo.svg" alt="Logo AKSAM" width="48" height="48" />
     </div>
+    <h1 class="hero-brand">AKSAM</h1>
+    <p class="hero-tagline">Suivi de présence à distance par géolocalisation</p>
+    <span class="hero-badge">Pointage · Suivi · Équipe</span>
   </div>
 
-  <div class="card" style="text-align:center; padding:32px 20px;">
-    <p class="sub" style="margin-bottom:20px;">Choisis ton accès</p>
-    <a href="/employe.html" class="btn btn-primary btn-block" style="display:block; text-decoration:none; margin-bottom:12px;">👷 Espace employé — Pointer</a>
-    <a href="/admin.html" class="btn btn-dark btn-block" style="display:block; text-decoration:none;">🔐 Espace admin — Suivi</a>
+  <div class="access-card">
+    <a href="/employe.html" class="access-link">
+      <div class="access-icon employee">👷</div>
+      <div>
+        <p class="access-title">Espace employé</p>
+        <p class="access-desc">Pointer son arrivée et son départ</p>
+      </div>
+      <div class="access-arrow">→</div>
+    </a>
+    <a href="/admin.html" class="access-link">
+      <div class="access-icon admin">🔐</div>
+      <div>
+        <p class="access-title">Espace admin</p>
+        <p class="access-desc">Suivi de l'équipe en temps réel</p>
+      </div>
+      <div class="access-arrow">→</div>
+    </a>
   </div>
+
+  <p class="footnote">AKSAM · Application interne de pointage</p>
 </div>
 </body>
 </html>
