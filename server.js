@@ -1,219 +1,187 @@
 const express = require("express");
-const fs = require("fs");
 const path = require("path");
-const crypto = require("crypto");
+const mongoose = require("mongoose");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DB_PATH = path.join(__dirname, "data", "db.json");
 
+// Variables d'environnement
 const ADMIN_USER = process.env.ADMIN_USER || "admin";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "aksam2026";
-const SESSION_COOKIE = "aksam_session";
-const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12h
+const MONGO_URI = process.env.MONGODB_URI;
 
-// Sessions gardées en mémoire (suffisant pour une seule instance du serveur)
-const sessions = new Map(); // token -> expiry timestamp
-
-function parseCookies(req) {
-  const header = req.headers.cookie;
-  const out = {};
-  if (!header) return out;
-  header.split(";").forEach((part) => {
-    const idx = part.indexOf("=");
-    if (idx === -1) return;
-    const k = part.slice(0, idx).trim();
-    const v = part.slice(idx + 1).trim();
-    out[k] = decodeURIComponent(v);
-  });
-  return out;
+// Connexion à MongoDB Atlas
+if (!MONGO_URI) {
+  console.error("❌ ERREUR : La variable MONGODB_URI n'est pas définie dans l'environnement !");
+} else {
+  mongoose.connect(MONGO_URI)
+    .then(() => console.log("✅ Connexion réussie à MongoDB Atlas !"))
+    .catch((err) => console.error("❌ Erreur de connexion MongoDB :", err));
 }
 
-function isAuthenticated(req) {
-  const cookies = parseCookies(req);
-  const token = cookies[SESSION_COOKIE];
-  if (!token) return false;
-  const expiry = sessions.get(token);
-  if (!expiry || expiry < Date.now()) {
-    sessions.delete(token);
-    return false;
-  }
-  return true;
-}
-
-function requireAdminPage(req, res, next) {
-  if (isAuthenticated(req)) return next();
-  return res.redirect("/login.html");
-}
-
-function requireAdminApi(req, res, next) {
-  if (isAuthenticated(req)) return next();
-  return res.status(401).json({ error: "Non authentifié." });
-}
-
-app.use(express.json());
-
-// --- Auth ---
-app.post("/api/login", (req, res) => {
-  const { username, password } = req.body || {};
-  if (username === ADMIN_USER && password === ADMIN_PASSWORD) {
-    const token = crypto.randomBytes(24).toString("hex");
-    sessions.set(token, Date.now() + SESSION_TTL_MS);
-    res.setHeader(
-      "Set-Cookie",
-      `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; Max-Age=${SESSION_TTL_MS / 1000}; SameSite=Lax`
-    );
-    return res.json({ ok: true });
-  }
-  return res.status(401).json({ error: "Identifiant ou mot de passe incorrect." });
+// --- Modèles MongoDB ---
+const employeeSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  pin: { type: String, required: true }
 });
 
-app.post("/api/logout", (req, res) => {
-  const cookies = parseCookies(req);
-  const token = cookies[SESSION_COOKIE];
-  if (token) sessions.delete(token);
-  res.setHeader("Set-Cookie", `${SESSION_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`);
-  res.json({ ok: true });
+const recordSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  employeeId: { type: String, required: true },
+  type: { type: String, enum: ["in", "out"], required: true },
+  ts: { type: Date, default: Date.now },
+  lat: Number,
+  lng: Number,
+  accuracy: Number
 });
 
-app.get("/api/session", (req, res) => {
-  res.json({ authenticated: isAuthenticated(req) });
+const settingSchema = new mongoose.Schema({
+  key: { type: String, default: "settings", unique: true },
+  startTime: { type: String, default: "08:00" }
 });
 
-// --- Page admin protégée : redirige vers /login.html si pas connecté ---
-app.get("/admin.html", requireAdminPage, (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin.html"));
-});
+const Employee = mongoose.model("Employee", employeeSchema);
+const Record = mongoose.model("Record", recordSchema);
+const Setting = mongoose.model("Setting", settingSchema);
 
-// --- Actions admin protégées ---
-app.post("/api/employees", requireAdminApi, (req, res) => {
-  const { name, pin } = req.body;
-  if (!name || !name.trim()) return res.status(400).json({ error: "Nom requis" });
-  const db = readDB();
-  const employee = {
-    id: `emp_${Date.now()}`,
-    name: name.trim(),
-    pin: /^\d{4}$/.test(pin || "") ? pin : randomPin(),
-  };
-  db.employees.push(employee);
-  writeDB(db);
-  res.json(employee);
-});
-
-app.delete("/api/employees/:id", requireAdminApi, (req, res) => {
-  const db = readDB();
-  db.employees = db.employees.filter((e) => e.id !== req.params.id);
-  writeDB(db);
-  res.json({ ok: true });
-});
-
-app.put("/api/settings", requireAdminApi, (req, res) => {
-  const { startTime } = req.body;
-  const db = readDB();
-  db.startTime = startTime || db.startTime;
-  writeDB(db);
-  res.json({ startTime: db.startTime });
-});
-
-// --- Fichiers statiques publics (login.html, employe.html, index.html, style.css...) ---
-app.use(express.static(path.join(__dirname, "public")));
-
-function ensureDataDir() {
-  const dir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-}
-
-function readDB() {
-  ensureDataDir();
-  if (!fs.existsSync(DB_PATH)) {
-    const initial = { employees: [], records: [], startTime: "08:00" };
-    fs.writeFileSync(DB_PATH, JSON.stringify(initial, null, 2));
-    return initial;
-  }
-  return JSON.parse(fs.readFileSync(DB_PATH, "utf-8"));
-}
-
-function writeDB(db) {
-  ensureDataDir();
-  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
-}
-
+// --- Fonctions utiles ---
 function randomPin() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
-function todayKey(iso) {
-  return new Date(iso).toISOString().slice(0, 10);
+function requireAdminAuth(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Basic ")) {
+    res.set("WWW-Authenticate", 'Basic realm="Espace admin AKSAM"');
+    return res.status(401).send("Authentification requise.");
+  }
+  const decoded = Buffer.from(auth.split(" ")[1], "base64").toString("utf-8");
+  const sepIndex = decoded.indexOf(":");
+  const user = decoded.slice(0, sepIndex);
+  const pass = decoded.slice(sepIndex + 1);
+  if (user === ADMIN_USER && pass === ADMIN_PASSWORD) {
+    return next();
+  }
+  res.set("WWW-Authenticate", 'Basic realm="Espace admin AKSAM"');
+  return res.status(401).send("Identifiants incorrects.");
 }
 
-// État autorisé : quelles actions sont valides selon le dernier pointage du jour
-function allowedNextActions(lastTypeToday) {
-  switch (lastTypeToday) {
-    case undefined:
-    case null:
-      return ["in"];
-    case "in":
-    case "pause_end":
-      return ["pause_start", "out"];
-    case "pause_start":
-      return ["pause_end"];
-    case "out":
-      return []; // journée terminée
-    default:
-      return ["in"];
+app.use(express.json());
+
+// Protection de la page Admin
+app.get("/admin.html", requireAdminAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
+});
+
+// --- Routes API Protégées (Admin) ---
+
+app.post("/api/employees", requireAdminAuth, async (req, res) => {
+  try {
+    const { name, pin } = req.body;
+    if (!name || !name.trim()) return res.status(400).json({ error: "Nom requis" });
+
+    const employee = new Employee({
+      id: `emp_${Date.now()}`,
+      name: name.trim(),
+      pin: /^\d{4}$/.test(pin || "") ? pin : randomPin(),
+    });
+
+    await employee.save();
+    res.json(employee);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur serveur lors de la création d'employé" });
   }
-}
-
-app.get("/api/employees", (req, res) => {
-  const db = readDB();
-  res.json(db.employees);
 });
 
-app.get("/api/records", (req, res) => {
-  const db = readDB();
-  res.json(db.records);
-});
-
-app.post("/api/records", (req, res) => {
-  const { employeeId, pin, action, lat, lng, accuracy } = req.body;
-  const db = readDB();
-  const employee = db.employees.find((e) => e.id === employeeId);
-  if (!employee) return res.status(404).json({ error: "Employé introuvable" });
-  if (employee.pin !== pin) return res.status(401).json({ error: "Code PIN incorrect" });
-
-  const today = todayKey(new Date().toISOString());
-  const todaysOwn = db.records
-    .filter((r) => r.employeeId === employeeId && todayKey(r.ts) === today)
-    .sort((a, b) => new Date(b.ts) - new Date(a.ts));
-  const lastType = todaysOwn[0] ? todaysOwn[0].type : null;
-  const allowed = allowedNextActions(lastType);
-
-  if (!allowed.includes(action)) {
-    return res.status(400).json({ error: "Action non valide pour l'état actuel." });
+app.delete("/api/employees/:id", requireAdminAuth, async (req, res) => {
+  try {
+    await Employee.deleteOne({ id: req.params.id });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de la suppression" });
   }
-
-  const record = {
-    id: `rec_${Date.now()}`,
-    employeeId,
-    type: action,
-    ts: new Date().toISOString(),
-    lat,
-    lng,
-    accuracy,
-  };
-  db.records.push(record);
-  writeDB(db);
-  res.json(record);
 });
 
-app.get("/api/settings", (req, res) => {
-  const db = readDB();
-  res.json({ startTime: db.startTime || "08:00" });
+app.put("/api/settings", requireAdminAuth, async (req, res) => {
+  try {
+    const { startTime } = req.body;
+    const settings = await Setting.findOneAndUpdate(
+      { key: "settings" },
+      { startTime: startTime || "08:00" },
+      { upsert: true, new: true }
+    );
+    res.json({ startTime: settings.startTime });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de la mise à jour des paramètres" });
+  }
+});
+
+// Priority sur les fichiers statiques de public/
+app.use(express.static(path.join(__dirname, "public")));
+
+// --- Routes API Publiques ---
+
+app.get("/api/employees", async (req, res) => {
+  try {
+    const employees = await Employee.find({}, { _id: 0, __v: 0 });
+    res.json(employees);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur chargement employés" });
+  }
+});
+
+app.get("/api/records", async (req, res) => {
+  try {
+    const records = await Record.find({}, { _id: 0, __v: 0 });
+    res.json(records);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur chargement pointages" });
+  }
+});
+
+app.post("/api/records", async (req, res) => {
+  try {
+    const { employeeId, pin, lat, lng, accuracy } = req.body;
+
+    const employee = await Employee.findOne({ id: employeeId });
+    if (!employee) return res.status(404).json({ error: "Employé introuvable" });
+    if (employee.pin !== pin) return res.status(401).json({ error: "Code PIN incorrect" });
+
+    // Récupérer le dernier pointage pour cet employé
+    const lastRecord = await Record.findOne({ employeeId }).sort({ ts: -1 });
+    const lastType = lastRecord ? lastRecord.type : "out";
+    const type = lastType === "out" ? "in" : "out";
+
+    const record = new Record({
+      id: `rec_${Date.now()}`,
+      employeeId,
+      type,
+      ts: new Date().toISOString(),
+      lat,
+      lng,
+      accuracy,
+    });
+
+    await record.save();
+    res.json(record);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de l'enregistrement du pointage" });
+  }
+});
+
+app.get("/api/settings", async (req, res) => {
+  try {
+    let settings = await Setting.findOne({ key: "settings" });
+    if (!settings) {
+      settings = await Setting.create({ key: "settings", startTime: "08:00" });
+    }
+    res.json({ startTime: settings.startTime });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur chargement paramètres" });
+  }
 });
 
 app.listen(PORT, () => {
-  console.log(`AKSAM PointageDistance lancé sur http://localhost:${PORT}`);
-  console.log(`  Accueil  : http://localhost:${PORT}/`);
-  console.log(`  Employés : http://localhost:${PORT}/employe.html`);
-  console.log(`  Connexion admin : http://localhost:${PORT}/login.html`);
+  console.log(`PointageDistance lancé sur http://localhost:${PORT}`);
 });
