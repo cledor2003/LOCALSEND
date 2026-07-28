@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Connexion admin — AKSAM</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="wrap" style="max-width:420px; padding-top:80px;">
+  <div class="hero" style="padding:32px 24px;">
+    <div class="hero-mark" style="width:64px; height:64px;">
+      <img src="/logo.svg" alt="Logo AKSAM" width="40" height="40" />
+    </div>
+    <h1 class="hero-brand" style="font-size:26px;">AKSAM</h1>
+    <p class="hero-tagline">Connexion à l'espace admin</p>
+  </div>
+
+  <div id="error" class="error-box" style="display:none;"></div>
+
+  <div class="card">
+    <div class="label">Identifiant</div>
+    <input type="text" id="username" placeholder="admin" autocomplete="username" />
+
+    <div class="label" style="margin-top:16px;">Mot de passe</div>
+    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" style="letter-spacing:normal; font-size:15px; text-align:left;" />
+
+    <button id="loginBtn" class="btn btn-primary btn-block" style="margin-top:22px;">Se connecter</button>
+  </div>
+
+  <p class="footnote"><a href="/" style="color:var(--text-dim); text-decoration:none;">← Retour à l'accueil</a></p>
+</div>
+
+<script>
+const errorBox = document.getElementById("error");
+function showError(msg) { errorBox.textContent = msg; errorBox.style.display = "block"; }
+function clearError() { errorBox.style.display = "none"; }
+
+async function attemptLogin() {
+  clearError();
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value;
+  const btn = document.getElementById("loginBtn");
+  btn.disabled = true;
+  btn.textContent = "Connexion…";
+  try {
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    if (res.ok) {
+      window.location.href = "/admin.html";
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
+    showError(data.error || "Connexion impossible.");
+  } catch (e) {
+    showError("Impossible de contacter le serveur.");
+  }
+  btn.disabled = false;
+  btn.textContent = "Se connecter";
+}
+
+document.getElementById("loginBtn").onclick = attemptLogin;
+document.getElementById("password").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") attemptLogin();
+});
+</script>
+</body>
+</html>

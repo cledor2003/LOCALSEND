@@ -17,13 +17,17 @@
         <p>Tableau de bord de présence</p>
       </div>
     </div>
-    <button onclick="loadAll()" class="btn" style="background:none; color:#64748b; padding:4px;">↻ Actualiser</button>
+    <div class="flex-row">
+      <button onclick="loadAll()" class="btn btn-dark" style="padding:8px 12px; font-size:12px;">↻ Actualiser</button>
+      <button id="logoutBtn" class="btn btn-dark" style="padding:8px 12px; font-size:12px;">⎋ Déconnexion</button>
+    </div>
   </div>
 
   <div id="error" class="error-box" style="display:none;"></div>
 
   <div class="stats-grid">
     <div class="stat present"><div class="label">Présents</div><div id="statPresent" class="value">0</div></div>
+    <div class="stat break"><div class="label">En pause</div><div id="statBreak" class="value">0</div></div>
     <div class="stat late"><div class="label">En retard</div><div id="statLate" class="value">0</div></div>
     <div class="stat absent"><div class="label">Absents</div><div id="statAbsent" class="value">0</div></div>
   </div>
@@ -49,7 +53,7 @@
       <input type="text" id="newPin" style="width:160px;" placeholder="PIN (4 chiffres, optionnel)" maxlength="4" />
       <button id="addBtn" class="btn btn-dark">+ Ajouter</button>
     </div>
-    <div id="createdPin" class="sub" style="display:none; margin-top:8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; padding:8px 10px; color:#0f766e;"></div>
+    <div id="createdPin" class="sub" style="display:none; margin-top:8px; background:rgba(45,212,191,0.1); border:1px solid rgba(45,212,191,0.35); border-radius:10px; padding:8px 10px; color:var(--teal);"></div>
     <div id="employeeTags" class="chip-row"></div>
   </div>
 
@@ -68,6 +72,8 @@ let startTime = "08:00";
 let notifyEnabled = false;
 let notifiedAbsent = new Set();
 
+const LABELS = { in: "arrivée", out: "départ", pause_start: "début de pause", pause_end: "fin de pause" };
+
 const errorBox = document.getElementById("error");
 function showError(msg) { errorBox.textContent = msg; errorBox.style.display = "block"; }
 function clearError() { errorBox.style.display = "none"; }
@@ -81,6 +87,7 @@ async function loadAll() {
     const [empRes, recRes, setRes] = await Promise.all([
       fetch("/api/employees"), fetch("/api/records"), fetch("/api/settings")
     ]);
+    if (empRes.status === 401) { window.location.href = "/login.html"; return; }
     employees = await empRes.json();
     records = await recRes.json();
     const settings = await setRes.json();
@@ -93,6 +100,11 @@ async function loadAll() {
   }
 }
 
+document.getElementById("logoutBtn").onclick = async () => {
+  await fetch("/api/logout", { method: "POST" });
+  window.location.href = "/login.html";
+};
+
 const addressCache = {};
 
 async function loadAddresses(recordsToResolve) {
@@ -100,12 +112,7 @@ async function loadAddresses(recordsToResolve) {
     const key = `${r.lat.toFixed(4)},${r.lng.toFixed(4)}`;
     const el = document.getElementById(`addr_${r.id}`);
     if (!el) continue;
-
-    if (addressCache[key]) {
-      el.textContent = `📍 ${addressCache[key]}`;
-      continue;
-    }
-
+    if (addressCache[key]) { el.textContent = `📍 ${addressCache[key]}`; continue; }
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${r.lat}&lon=${r.lng}&zoom=18&addressdetails=1`,
@@ -120,13 +127,9 @@ async function loadAddresses(recordsToResolve) {
       ].filter(Boolean);
       const label = parts.length ? parts.join(", ") : (data.display_name || "Adresse introuvable");
       addressCache[key] = label;
-      if (document.getElementById(`addr_${r.id}`)) {
-        document.getElementById(`addr_${r.id}`).textContent = `📍 ${label}`;
-      }
+      if (document.getElementById(`addr_${r.id}`)) document.getElementById(`addr_${r.id}`).textContent = `📍 ${label}`;
     } catch (e) {
-      if (document.getElementById(`addr_${r.id}`)) {
-        document.getElementById(`addr_${r.id}`).textContent = "📍 Adresse indisponible";
-      }
+      if (document.getElementById(`addr_${r.id}`)) document.getElementById(`addr_${r.id}`).textContent = "📍 Adresse indisponible";
     }
     await new Promise(res => setTimeout(res, 300));
   }
@@ -135,7 +138,17 @@ async function loadAddresses(recordsToResolve) {
 function render() {
   const todayStr = todayKey(new Date().toISOString());
   const todayRecords = records.filter(r => todayKey(r.ts) === todayStr);
-  const presentIds = new Set(todayRecords.filter(r => r.type === "in").map(r => r.employeeId));
+
+  // dernier statut du jour par employé
+  const lastByEmp = {};
+  todayRecords.forEach(r => {
+    if (!lastByEmp[r.employeeId] || new Date(r.ts) > new Date(lastByEmp[r.employeeId].ts)) {
+      lastByEmp[r.employeeId] = r;
+    }
+  });
+
+  const presentIds = new Set(Object.entries(lastByEmp).filter(([id, r]) => r.type !== "out" && r.type !== undefined && (r.type === "in" || r.type === "pause_start" || r.type === "pause_end")).map(([id]) => id));
+  const breakIds = new Set(Object.entries(lastByEmp).filter(([id, r]) => r.type === "pause_start").map(([id]) => id));
   const lateIds = new Set(todayRecords.filter(r => {
     if (r.type !== "in") return false;
     const t = new Date(r.ts);
@@ -146,17 +159,23 @@ function render() {
   const absentCount = Math.max(employees.length - presentIds.size, 0);
 
   document.getElementById("statPresent").textContent = presentIds.size;
+  document.getElementById("statBreak").textContent = breakIds.size;
   document.getElementById("statLate").textContent = lateIds.size;
   document.getElementById("statAbsent").textContent = absentCount;
   document.getElementById("empCount").textContent = employees.length;
 
   const tags = document.getElementById("employeeTags");
-  tags.innerHTML = employees.map(e => `
-    <span class="chip" style="cursor:default;">
-      ${presentIds.has(e.id) ? "✅" : "⚠️"} ${e.name}
-      <span class="pin-tag">· PIN ${e.pin}</span>
-    </span>
-  `).join("");
+  tags.innerHTML = employees.map(e => {
+    let icon = "⚠️";
+    if (breakIds.has(e.id)) icon = "☕";
+    else if (presentIds.has(e.id)) icon = "✅";
+    return `
+      <span class="chip" style="cursor:default;">
+        ${icon} ${e.name}
+        <span class="pin-tag">· PIN ${e.pin}</span>
+      </span>
+    `;
+  }).join("");
 
   const allSorted = [...records].sort((a, b) => new Date(b.ts) - new Date(a.ts));
   const historyBox = document.getElementById("history");
@@ -171,7 +190,7 @@ function render() {
           <div>
             <span class="dot ${r.type}"></span>
             <strong>${emp ? emp.name : "Employé supprimé"}</strong>
-            <span class="sub">${r.type === "in" ? "arrivée" : "départ"}</span>
+            <span class="sub">${LABELS[r.type] || r.type}</span>
             <div id="${addrId}" class="sub" style="margin-top:2px; max-width:320px;">📍 Recherche de l'adresse…</div>
           </div>
           <div style="text-align:right;">
@@ -206,6 +225,7 @@ document.getElementById("addBtn").onclick = async () => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, pin }),
   });
+  if (res.status === 401) { window.location.href = "/login.html"; return; }
   const emp = await res.json();
   document.getElementById("newName").value = "";
   document.getElementById("newPin").value = "";
@@ -221,7 +241,7 @@ document.getElementById("exportBtn").onclick = () => {
     const d = new Date(r.ts);
     return {
       Employe: emp ? emp.name : "Employé supprimé",
-      Type: r.type === "in" ? "Arrivée" : "Départ",
+      Type: LABELS[r.type] || r.type,
       Date: d.toLocaleDateString("fr-FR"),
       Heure: d.toLocaleTimeString("fr-FR"),
       Latitude: r.lat,
@@ -231,7 +251,7 @@ document.getElementById("exportBtn").onclick = () => {
     };
   });
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws["!cols"] = [{ wch: 18 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 40 }];
+  ws["!cols"] = [{ wch: 18 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 40 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Pointages");
   XLSX.writeFile(wb, `pointages_${todayKey(new Date().toISOString())}.xlsx`);

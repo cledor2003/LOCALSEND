@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Pointage</title>
+<title>AKSAM — Pointage</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -12,7 +12,7 @@
     <div class="logo"><img src="/logo.svg" alt="Logo AKSAM" /></div>
     <div>
       <h1>AKSAM — Pointage</h1>
-      <p>Enregistre ton arrivée et ton départ</p>
+      <p>Enregistre ton arrivée, ta pause et ton départ</p>
     </div>
   </div>
 
@@ -26,17 +26,18 @@
   <div id="employeeCard" style="display:none;" class="card center-card">
     <div class="sub">Connecté en tant que</div>
     <div id="employeeName" class="employee-name"></div>
-    <div id="lastRecord" class="sub mono" style="margin-top:8px;"></div>
+    <div id="statusBadge"></div>
+    <div id="lastRecord" class="sub mono" style="margin-top:10px;"></div>
 
-    <div id="pinSection" style="margin-top:20px; max-width:220px; margin-left:auto; margin-right:auto;">
+    <div id="pinSection" style="margin-top:22px; max-width:220px; margin-left:auto; margin-right:auto;">
       <div class="label">🔒 Code PIN</div>
       <input type="password" id="pinInput" maxlength="4" inputmode="numeric" placeholder="••••" />
-      <div id="pinError" style="color:#dc2626; font-size:12px; margin-top:4px;"></div>
+      <div id="pinError" style="color:#fb7185; font-size:12px; margin-top:4px;"></div>
       <button id="pinBtn" class="btn btn-dark btn-block">Valider le code</button>
     </div>
 
-    <button id="pointBtn" class="btn btn-primary" style="display:none; margin-top:20px; padding:16px 32px; font-size:16px;"></button>
-    <div class="sub" style="margin-top:12px;">📍 Ta position sera enregistrée avec l'heure</div>
+    <div id="actionButtons" class="btn-row" style="display:none; margin-top:22px;"></div>
+    <div class="sub" style="margin-top:14px;">📍 Ta position sera enregistrée avec l'heure</div>
   </div>
 
   <div id="todayCard" style="display:none;" class="card">
@@ -52,29 +53,27 @@ let currentEmployeeId = null;
 let pinUnlocked = false;
 
 const errorBox = document.getElementById("error");
-function showError(msg) {
-  errorBox.textContent = msg;
-  errorBox.style.display = "block";
-}
-function clearError() {
-  errorBox.style.display = "none";
-}
+function showError(msg) { errorBox.textContent = msg; errorBox.style.display = "block"; }
+function clearError() { errorBox.style.display = "none"; }
 
 function fmtTime(iso) {
   return new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
-function todayKey(iso) {
-  return new Date(iso).toISOString().slice(0, 10);
-}
+function todayKey(iso) { return new Date(iso).toISOString().slice(0, 10); }
+
+const LABELS = {
+  in: "Arrivée",
+  out: "Départ",
+  pause_start: "Début de pause",
+  pause_end: "Fin de pause",
+};
 
 async function loadAll() {
-  const [empRes, recRes] = await Promise.all([
-    fetch("/api/employees"), fetch("/api/records")
-  ]);
+  const [empRes, recRes] = await Promise.all([fetch("/api/employees"), fetch("/api/records")]);
   employees = await empRes.json();
   records = await recRes.json();
   renderChips();
-  if (currentEmployeeId) selectEmployee(currentEmployeeId, true);
+  if (currentEmployeeId) renderEmployeeCard();
 }
 
 function renderChips() {
@@ -93,17 +92,32 @@ function renderChips() {
   });
 }
 
-function lastRecordFor(empId) {
+function todaysRecordsFor(empId) {
+  const today = todayKey(new Date().toISOString());
   return records
-    .filter(r => r.employeeId === empId)
-    .sort((a, b) => new Date(b.ts) - new Date(a.ts))[0] || null;
-}
-function nextActionFor(empId) {
-  const last = lastRecordFor(empId);
-  return (!last || last.type === "out") ? "in" : "out";
+    .filter(r => r.employeeId === empId && todayKey(r.ts) === today)
+    .sort((a, b) => new Date(b.ts) - new Date(a.ts));
 }
 
-function selectEmployee(id, silent) {
+function allowedActionsFor(empId) {
+  const last = todaysRecordsFor(empId)[0];
+  const lastType = last ? last.type : null;
+  if (!lastType) return ["in"];
+  if (lastType === "in" || lastType === "pause_end") return ["pause_start", "out"];
+  if (lastType === "pause_start") return ["pause_end"];
+  return []; // "out" -> journée terminée
+}
+
+function statusFor(empId) {
+  const last = todaysRecordsFor(empId)[0];
+  const lastType = last ? last.type : null;
+  if (!lastType) return { cls: "not-started", label: "Pas encore arrivé" };
+  if (lastType === "pause_start") return { cls: "break", label: "En pause" };
+  if (lastType === "out") return { cls: "done", label: "Journée terminée" };
+  return { cls: "working", label: "En poste" };
+}
+
+function selectEmployee(id) {
   currentEmployeeId = id;
   pinUnlocked = false;
   document.getElementById("pinInput").value = "";
@@ -112,6 +126,13 @@ function selectEmployee(id, silent) {
   renderEmployeeCard();
 }
 
+const ACTION_STYLE = {
+  in: "btn-primary",
+  out: "btn-amber",
+  pause_start: "btn-teal",
+  pause_end: "btn-primary",
+};
+
 function renderEmployeeCard() {
   const emp = employees.find(e => e.id === currentEmployeeId);
   const card = document.getElementById("employeeCard");
@@ -119,33 +140,46 @@ function renderEmployeeCard() {
   card.style.display = "block";
   document.getElementById("employeeName").textContent = emp.name;
 
-  const last = lastRecordFor(emp.id);
+  const status = statusFor(emp.id);
+  document.getElementById("statusBadge").innerHTML =
+    `<span class="status-badge ${status.cls}">${status.label}</span>`;
+
+  const last = todaysRecordsFor(emp.id)[0];
   document.getElementById("lastRecord").textContent = last
-    ? `Dernier pointage : ${last.type === "in" ? "Arrivée" : "Départ"} à ${fmtTime(last.ts)}`
+    ? `Dernier pointage : ${LABELS[last.type]} à ${fmtTime(last.ts)}`
     : "";
 
   document.getElementById("pinSection").style.display = pinUnlocked ? "none" : "block";
-  const pointBtn = document.getElementById("pointBtn");
-  pointBtn.style.display = pinUnlocked ? "inline-block" : "none";
-  const action = nextActionFor(emp.id);
-  pointBtn.className = "btn " + (action === "in" ? "btn-primary" : "btn-amber");
-  pointBtn.textContent = action === "in" ? "Pointer l'arrivée" : "Pointer le départ";
+
+  const actions = allowedActionsFor(emp.id);
+  const btnBox = document.getElementById("actionButtons");
+  if (pinUnlocked && actions.length > 0) {
+    btnBox.style.display = "flex";
+    btnBox.innerHTML = actions.map(a => `
+      <button class="btn ${ACTION_STYLE[a]}" data-action="${a}">${LABELS[a]}</button>
+    `).join("");
+    btnBox.querySelectorAll("button").forEach(b => {
+      b.onclick = () => doPointage(b.dataset.action, b);
+    });
+  } else {
+    btnBox.style.display = "none";
+    if (pinUnlocked && actions.length === 0) {
+      showError("Journée déjà terminée pour aujourd'hui.");
+    }
+  }
 
   renderToday(emp.id);
 }
 
 function renderToday(empId) {
-  const today = todayKey(new Date().toISOString());
-  const mine = records
-    .filter(r => r.employeeId === empId && todayKey(r.ts) === today)
-    .sort((a, b) => new Date(b.ts) - new Date(a.ts));
+  const mine = todaysRecordsFor(empId);
   const box = document.getElementById("todayCard");
   const list = document.getElementById("todayList");
   if (mine.length === 0) { box.style.display = "none"; return; }
   box.style.display = "block";
   list.innerHTML = mine.map(r => `
     <div class="row">
-      <span><span class="dot ${r.type}"></span>${r.type === "in" ? "Arrivée" : "Départ"}</span>
+      <span><span class="dot ${r.type}"></span>${LABELS[r.type]}</span>
       <span class="mono">${fmtTime(r.ts)}</span>
     </div>
   `).join("");
@@ -178,6 +212,8 @@ function geoErrorMessage(err) {
   }
 }
 
+let pendingAction = null;
+
 async function submitPointage(pos) {
   const emp = employees.find(e => e.id === currentEmployeeId);
   try {
@@ -186,7 +222,8 @@ async function submitPointage(pos) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         employeeId: currentEmployeeId,
-        pin: currentPin,
+        pin: emp.pin,
+        action: pendingAction,
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
         accuracy: Math.round(pos.coords.accuracy || 0),
@@ -208,18 +245,17 @@ async function submitPointage(pos) {
   }
 }
 
-let currentPin = "";
 function setBusy(isBusy) {
-  const btn = document.getElementById("pointBtn");
-  btn.disabled = isBusy;
+  document.querySelectorAll("#actionButtons button").forEach(b => (b.disabled = isBusy));
 }
 
-document.getElementById("pointBtn").onclick = () => {
+function doPointage(action, btnEl) {
   const emp = employees.find(e => e.id === currentEmployeeId);
   if (!emp || !pinUnlocked) return;
-  currentPin = emp.pin;
+  pendingAction = action;
   clearError();
   setBusy(true);
+  if (btnEl) btnEl.textContent = "Localisation…";
 
   if (window.isSecureContext === false) {
     showError("Cette page n'est pas chargée en HTTPS : la géolocalisation est bloquée par le navigateur.");
@@ -248,7 +284,7 @@ document.getElementById("pointBtn").onclick = () => {
     },
     { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
   );
-};
+}
 
 loadAll();
 </script>
