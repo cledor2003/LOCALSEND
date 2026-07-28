@@ -50,21 +50,49 @@ function randomPin() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
+// Middleware d'authentification Administrateur
 function requireAdminAuth(req, res, next) {
   const auth = req.headers.authorization;
   if (!auth || !auth.startsWith("Basic ")) {
-    res.set("WWW-Authenticate", 'Basic realm="Espace admin AKSAM"');
-    return res.status(401).send("Authentification requise.");
+    res.set("WWW-Authenticate", 'Basic realm="Espace Admin AKSAM"');
+    return res.status(401).send(`
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Accès refusé - AKSAM</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; padding-top: 80px; background: #f4f6f8; margin: 0; }
+          .card { background: white; max-width: 380px; margin: 0 auto; padding: 32px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+          h2 { color: #1e293b; margin-top: 0; font-size: 20px; }
+          p { color: #64748b; font-size: 14px; line-height: 1.5; margin-bottom: 24px; }
+          button { background: #0284c7; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer; width: 100%; transition: background 0.2s; }
+          button:hover { background: #0369a1; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <h2>Authentification requise</h2>
+          <p>Veuillez cliquer ci-dessous pour entrer vos identifiants administrateur.</p>
+          <button onclick="location.reload()">Se connecter</button>
+        </div>
+      </body>
+      </html>
+    `);
   }
+
   const decoded = Buffer.from(auth.split(" ")[1], "base64").toString("utf-8");
   const sepIndex = decoded.indexOf(":");
   const user = decoded.slice(0, sepIndex);
   const pass = decoded.slice(sepIndex + 1);
+
   if (user === ADMIN_USER && pass === ADMIN_PASSWORD) {
     return next();
   }
-  res.set("WWW-Authenticate", 'Basic realm="Espace admin AKSAM"');
-  return res.status(401).send("Identifiants incorrects.");
+
+  res.set("WWW-Authenticate", 'Basic realm="Espace Admin AKSAM"');
+  return res.status(401).send("Identifiants incorrects. Veuillez rafraîchir la page pour réessayer.");
 }
 
 app.use(express.json());
@@ -117,7 +145,7 @@ app.put("/api/settings", requireAdminAuth, async (req, res) => {
   }
 });
 
-// Priority sur les fichiers statiques de public/
+// Fichiers statiques
 app.use(express.static(path.join(__dirname, "public")));
 
 // --- Routes API Publiques ---
