@@ -139,7 +139,6 @@ function render() {
   const todayStr = todayKey(new Date().toISOString());
   const todayRecords = records.filter(r => todayKey(r.ts) === todayStr);
 
-  // dernier statut du jour par employé
   const lastByEmp = {};
   todayRecords.forEach(r => {
     if (!lastByEmp[r.employeeId] || new Date(r.ts) > new Date(lastByEmp[r.employeeId].ts)) {
@@ -170,12 +169,17 @@ function render() {
     if (breakIds.has(e.id)) icon = "☕";
     else if (presentIds.has(e.id)) icon = "✅";
     return `
-      <span class="chip" style="cursor:default;">
+      <span class="chip" style="cursor:default; display:inline-flex; align-items:center; gap:8px;">
         ${icon} ${e.name}
         <span class="pin-tag">· PIN ${e.pin}</span>
+        <button class="delete-emp-btn" data-id="${e.id}" data-name="${e.name}" title="Supprimer cet employé"
+          style="background:none; border:none; color:var(--red); cursor:pointer; font-size:14px; padding:0; line-height:1;">✕</button>
       </span>
     `;
   }).join("");
+  tags.querySelectorAll(".delete-emp-btn").forEach(btn => {
+    btn.onclick = () => deleteEmployee(btn.dataset.id, btn.dataset.name);
+  });
 
   const allSorted = [...records].sort((a, b) => new Date(b.ts) - new Date(a.ts));
   const historyBox = document.getElementById("history");
@@ -234,6 +238,14 @@ document.getElementById("addBtn").onclick = async () => {
   box.textContent = `Code PIN de ${emp.name} : ${emp.pin} — communique-le en privé à l'employé.`;
   await loadAll();
 };
+
+async function deleteEmployee(id, name) {
+  const confirmed = confirm(`Supprimer ${name} ? Son historique de pointages restera dans les registres, mais il ne pourra plus pointer.`);
+  if (!confirmed) return;
+  const res = await fetch(`/api/employees/${id}`, { method: "DELETE" });
+  if (res.status === 401) { window.location.href = "/login.html"; return; }
+  await loadAll();
+}
 
 document.getElementById("exportBtn").onclick = () => {
   const rows = [...records].sort((a, b) => new Date(b.ts) - new Date(a.ts)).map(r => {
