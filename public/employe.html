@@ -46,6 +46,8 @@
     <div class="label" style="margin-bottom:8px;">Aujourd'hui</div>
     <div id="todayList"></div>
   </div>
+
+  <p class="footnote"><a href="/" style="color:var(--text-dim); text-decoration:none;">← Retour à l'accueil</a></p>
 </div>
 
 <script>
@@ -142,14 +144,18 @@ function renderEmployeeCard() {
   card.style.display = "block";
   document.getElementById("employeeName").textContent = emp.name;
 
-  const status = statusFor(emp.id);
-  document.getElementById("statusBadge").innerHTML =
-    `<span class="status-badge ${status.cls}">${status.label}</span>`;
-
-  const last = todaysRecordsFor(emp.id)[0];
-  document.getElementById("lastRecord").textContent = last
-    ? `Dernier pointage : ${LABELS[last.type]} à ${fmtTime(last.ts)}`
-    : "";
+  if (pinUnlocked) {
+    const status = statusFor(emp.id);
+    document.getElementById("statusBadge").innerHTML =
+      `<span class="status-badge ${status.cls}">${status.label}</span>`;
+    const last = todaysRecordsFor(emp.id)[0];
+    document.getElementById("lastRecord").textContent = last
+      ? `Dernier pointage : ${LABELS[last.type]} à ${fmtTime(last.ts)}`
+      : "";
+  } else {
+    document.getElementById("statusBadge").innerHTML = "";
+    document.getElementById("lastRecord").textContent = "";
+  }
 
   document.getElementById("pinSection").style.display = pinUnlocked ? "none" : "block";
 
@@ -170,7 +176,11 @@ function renderEmployeeCard() {
     }
   }
 
-  renderToday(emp.id);
+  if (pinUnlocked) {
+    renderToday(emp.id);
+  } else {
+    document.getElementById("todayCard").style.display = "none";
+  }
 }
 
 function renderToday(empId) {
