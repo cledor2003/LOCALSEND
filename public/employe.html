@@ -38,6 +38,8 @@
 
     <div id="actionButtons" class="btn-row" style="display:none; margin-top:22px;"></div>
     <div class="sub" style="margin-top:14px;">📍 Ta position sera enregistrée avec l'heure</div>
+
+    <button id="switchUserBtn" class="btn btn-dark" style="margin-top:18px; font-size:13px; padding:9px 16px;">↩ Ce n'est pas moi / Changer de personne</button>
   </div>
 
   <div id="todayCard" style="display:none;" class="card">
@@ -105,7 +107,7 @@ function allowedActionsFor(empId) {
   if (!lastType) return ["in"];
   if (lastType === "in" || lastType === "pause_end") return ["pause_start", "out"];
   if (lastType === "pause_start") return ["pause_end"];
-  return []; // "out" -> journée terminée
+  return [];
 }
 
 function statusFor(empId) {
@@ -195,6 +197,17 @@ document.getElementById("pinBtn").onclick = () => {
     document.getElementById("pinError").textContent = "Code PIN incorrect.";
     document.getElementById("pinInput").value = "";
   }
+};
+
+document.getElementById("switchUserBtn").onclick = () => {
+  currentEmployeeId = null;
+  pinUnlocked = false;
+  clearError();
+  document.getElementById("pinInput").value = "";
+  document.getElementById("pinError").textContent = "";
+  renderChips();
+  renderEmployeeCard();
+  document.getElementById("todayCard").style.display = "none";
 };
 document.getElementById("pinInput").addEventListener("keydown", e => {
   if (e.key === "Enter") document.getElementById("pinBtn").click();
