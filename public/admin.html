@@ -240,8 +240,7 @@ document.getElementById("addBtn").onclick = async () => {
 };
 
 async function deleteEmployee(id, name) {
-  const confirmed = confirm(`Supprimer ${name} ? Son historique de pointages restera dans les registres, mais il ne pourra plus pointer.`);
-  if (!confirmed) return;
+const confirmed = confirm(`Supprimer ${name} ? Tout son historique de pointages sera aussi supprimé définitivement de la base de données.`);  if (!confirmed) return;
   const res = await fetch(`/api/employees/${id}`, { method: "DELETE" });
   if (res.status === 401) { window.location.href = "/login.html"; return; }
   await loadAll();
