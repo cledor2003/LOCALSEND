@@ -219,6 +219,12 @@ app.get("/api/settings", requireDB, asyncHandler(async (req, res) => {
   const settings = await db.collection("settings").findOne({ _id: "config" });
   res.json({ startTime: (settings && settings.startTime) || "08:00" });
 }));
+app.delete("/api/records/orphaned", requireAdminApi, requireDB, asyncHandler(async (req, res) => {
+  const employees = await db.collection("employees").find({}, { projection: { id: 1 } }).toArray();
+  const validIds = employees.map((e) => e.id);
+  const result = await db.collection("records").deleteMany({ employeeId: { $nin: validIds } });
+  res.json({ ok: true, deleted: result.deletedCount });
+}));
 
 // Filet de sécurité final : toute erreur non prévue ailleurs renvoie du JSON
 // propre au lieu de la page d'erreur HTML par défaut d'Express.
