@@ -246,7 +246,15 @@ const confirmed = confirm(`Supprimer ${name} ? Tout son historique de pointages 
   if (res.status === 401) { window.location.href = "/login.html"; return; }
   await loadAll();
 }
-
+document.getElementById("cleanupBtn").onclick = async () => {
+  const confirmed = confirm("Supprimer définitivement tous les pointages liés à des employés déjà supprimés ? Cette action est irréversible.");
+  if (!confirmed) return;
+  const res = await fetch("/api/records/orphaned", { method: "DELETE" });
+  if (res.status === 401) { window.location.href = "/login.html"; return; }
+  const data = await res.json();
+  alert(`${data.deleted} pointage(s) orphelin(s) supprimé(s).`);
+  await loadAll();
+};
 document.getElementById("exportBtn").onclick = () => {
   const rows = [...records].sort((a, b) => new Date(b.ts) - new Date(a.ts)).map(r => {
     const emp = employees.find(e => e.id === r.employeeId);
