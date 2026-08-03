@@ -158,7 +158,8 @@ app.post("/api/employees", requireAdminApi, requireDB, asyncHandler(async (req, 
 
 app.delete("/api/employees/:id", requireAdminApi, requireDB, asyncHandler(async (req, res) => {
   await db.collection("employees").deleteOne({ id: req.params.id });
-  res.json({ ok: true });
+  const deletedRecords = await db.collection("records").deleteMany({ employeeId: req.params.id });
+  res.json({ ok: true, recordsDeleted: deletedRecords.deletedCount });
 }));
 
 app.put("/api/settings", requireAdminApi, requireDB, asyncHandler(async (req, res) => {
