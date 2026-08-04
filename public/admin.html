@@ -6,6 +6,7 @@
 <title>Suivi admin - AKSAM</title>
 <link rel="stylesheet" href="style.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="/theme.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -18,6 +19,7 @@
       </div>
     </div>
     <div class="flex-row">
+      <button id="themeToggle" class="theme-toggle" title="Changer de thème">☀️</button>
       <button onclick="loadAll()" class="btn btn-dark" style="padding:8px 12px; font-size:12px;">↻ Actualiser</button>
       <button id="logoutBtn" class="btn btn-dark" style="padding:8px 12px; font-size:12px;">⎋ Déconnexion</button>
     </div>
@@ -140,6 +142,7 @@ function render() {
   const todayStr = todayKey(new Date().toISOString());
   const todayRecords = records.filter(r => todayKey(r.ts) === todayStr);
 
+  // dernier statut du jour par employé
   const lastByEmp = {};
   todayRecords.forEach(r => {
     if (!lastByEmp[r.employeeId] || new Date(r.ts) > new Date(lastByEmp[r.employeeId].ts)) {
@@ -241,11 +244,13 @@ document.getElementById("addBtn").onclick = async () => {
 };
 
 async function deleteEmployee(id, name) {
-const confirmed = confirm(`Supprimer ${name} ? Tout son historique de pointages sera aussi supprimé définitivement de la base de données.`);  if (!confirmed) return;
+  const confirmed = confirm(`Supprimer ${name} ? Tout son historique de pointages sera aussi supprimé définitivement de la base de données.`);
+  if (!confirmed) return;
   const res = await fetch(`/api/employees/${id}`, { method: "DELETE" });
   if (res.status === 401) { window.location.href = "/login.html"; return; }
   await loadAll();
 }
+
 document.getElementById("cleanupBtn").onclick = async () => {
   const confirmed = confirm("Supprimer définitivement tous les pointages liés à des employés déjà supprimés ? Cette action est irréversible.");
   if (!confirmed) return;
@@ -255,6 +260,7 @@ document.getElementById("cleanupBtn").onclick = async () => {
   alert(`${data.deleted} pointage(s) orphelin(s) supprimé(s).`);
   await loadAll();
 };
+
 document.getElementById("exportBtn").onclick = () => {
   const rows = [...records].sort((a, b) => new Date(b.ts) - new Date(a.ts)).map(r => {
     const emp = employees.find(e => e.id === r.employeeId);
