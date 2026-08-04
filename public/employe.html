@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>AKSAM — Pointage</title>
 <link rel="stylesheet" href="style.css" />
+<script src="/theme.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -14,6 +15,7 @@
       <h1>AKSAM — Pointage</h1>
       <p>Enregistre ton arrivée, ta pause et ton départ</p>
     </div>
+    <button id="themeToggle" class="theme-toggle" style="margin-left:auto;" title="Changer de thème">☀️</button>
   </div>
 
   <div id="error" class="error-box" style="display:none;"></div>
@@ -109,7 +111,7 @@ function allowedActionsFor(empId) {
   if (!lastType) return ["in"];
   if (lastType === "in" || lastType === "pause_end") return ["pause_start", "out"];
   if (lastType === "pause_start") return ["pause_end"];
-  return [];
+  return []; // "out" -> journée terminée
 }
 
 function statusFor(empId) {
@@ -153,6 +155,9 @@ function renderEmployeeCard() {
       ? `Dernier pointage : ${LABELS[last.type]} à ${fmtTime(last.ts)}`
       : "";
   } else {
+    // Rien sur les horaires tant que le PIN n'est pas validé : évite qu'un
+    // employé voie les heures d'arrivée/départ d'un collègue en cliquant
+    // simplement sur son nom.
     document.getElementById("statusBadge").innerHTML = "";
     document.getElementById("lastRecord").textContent = "";
   }
