@@ -5,9 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Connexion admin — AKSAM</title>
 <link rel="stylesheet" href="style.css" />
+<script src="/theme.js"></script>
 </head>
 <body>
-<div class="wrap" style="max-width:420px; padding-top:80px;">
+<div class="wrap" style="max-width:420px; padding-top:60px;">
+  <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+    <button id="themeToggle" class="theme-toggle" title="Changer de thème">☀️</button>
+  </div>
   <div class="hero" style="padding:32px 24px;">
     <div class="hero-mark" style="width:64px; height:64px;">
       <img src="/logo.svg" alt="Logo AKSAM" width="40" height="40" />
@@ -53,8 +57,8 @@ async function attemptLogin() {
       window.location.href = "/admin.html";
       return;
     }
-    const data = await res.json().catch(() => ({}));
-    showError(data.error || "Connexion impossible.");
+    const data = await res.json().catch(() => null);
+    showError((data && data.error) || `Connexion impossible (code ${res.status}). Réessaie dans quelques secondes.`);
   } catch (e) {
     showError("Impossible de contacter le serveur.");
   }
