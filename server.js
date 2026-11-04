@@ -6,7 +6,6 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Augmentation de la limite de taille pour accepter les images en base64
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -70,7 +69,6 @@ app.post('/api/pointage', (req, res) => {
     res.status(404).json({ success: false, message: 'Employé non trouvé' });
 });
 
-// Enregistrement de la tâche avec les captures d'écran (5 max)
 app.post('/api/taches', (req, res) => {
     const { employe, tache, currentApp, screenshots } = req.body;
     const db = loadData();
@@ -140,5 +138,5 @@ app.delete('/api/admin/employes/:name', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Serveur démarré sur le port ${PORT}`);
+    console.log(`Serveur AKSAM démarré sur le port ${PORT}`);
 });

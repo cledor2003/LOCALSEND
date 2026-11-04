@@ -3,15 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nexus - Tableau de Bord Administrateur</title>
+  <title>AKSAM - Administration & Supervision</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #05070b;
-      --card-bg: rgba(13, 19, 33, 0.75);
+      --bg-overlay: rgba(3, 7, 18, 0.90);
+      --card-bg: rgba(15, 23, 42, 0.80);
+      --sidebar-bg: rgba(10, 15, 30, 0.92);
       --border: rgba(56, 189, 248, 0.15);
       --primary: #38bdf8;
-      --accent: #c084fc;
+      --accent: #818cf8;
       --success: #34d399;
       --warning: #fbbf24;
       --danger: #f87171;
@@ -20,16 +21,47 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
-    body { background-color: var(--bg); color: var(--text); min-height: 100vh; background-image: radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.12) 0%, transparent 45%), radial-gradient(circle at 85% 85%, rgba(192, 132, 252, 0.12) 0%, transparent 45%); padding: 20px; }
-    .container { max-width: 1250px; margin: 0 auto; }
+    
+    body { 
+      background: linear-gradient(var(--bg-overlay), var(--bg-overlay)), url('https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+      background-size: cover;
+      color: var(--text); 
+      min-height: 100vh; 
+      display: flex;
+    }
 
-    .glass-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 24px; padding: 30px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5); margin-bottom: 25px; }
+    /* MENU LATÉRAL (SIDEBAR) */
+    sidebar {
+      width: 260px;
+      background: var(--sidebar-bg);
+      backdrop-filter: blur(25px);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 30px 20px;
+      position: fixed;
+      height: 100vh;
+      z-index: 100;
+    }
 
-    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: var(--card-bg); padding: 20px 30px; border-radius: 20px; border: 1px solid var(--border); }
-    .admin-badge { display: flex; align-items: center; gap: 15px; }
-    .avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--success); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #05070b; font-size: 1.4rem; box-shadow: 0 0 15px rgba(52,211,153,0.4); }
+    .brand-area { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; }
+    .brand-logo { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #05070b; font-size: 1.2rem; }
+    .brand-name { font-size: 1.1rem; font-weight: 700; letter-spacing: 1px; color: white; }
+    .brand-sub { font-size: 0.75rem; color: var(--text-muted); }
 
-    .status-pill { padding: 6px 14px; border-radius: 30px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+    .nav-menu { display: flex; flex-direction: column; gap: 10px; flex-grow: 1; }
+    .nav-item { padding: 12px 16px; border-radius: 12px; color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 0.95rem; display: flex; align-items: center; gap: 12px; transition: 0.2s; }
+    .nav-item.active, .nav-item:hover { background: rgba(56, 189, 248, 0.12); color: var(--primary); }
+
+    /* CONTENU PRINCIPAL */
+    main { margin-left: 260px; padding: 30px; width: calc(100% - 260px); min-height: 100vh; }
+
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: var(--card-bg); padding: 20px 30px; border-radius: 20px; border: 1px solid var(--border); backdrop-filter: blur(20px); }
+    
+    .glass-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 20px; padding: 25px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5); margin-bottom: 25px; }
+
+    .status-pill { padding: 5px 12px; border-radius: 30px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
     .pill-online { background: rgba(52, 211, 153, 0.15); color: var(--success); border: 1px solid rgba(52, 211, 153, 0.4); }
     .pill-pause { background: rgba(251, 191, 36, 0.15); color: var(--warning); border: 1px solid rgba(251, 191, 36, 0.4); }
     .pill-offline { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); border: 1px solid rgba(148, 163, 184, 0.4); }
@@ -45,243 +77,263 @@
     .btn-danger { background: var(--danger); color: white; }
     .btn-secondary { background: rgba(255, 255, 255, 0.1); color: white; }
     
-    input, select { width: 100%; padding: 12px 18px; background: rgba(5, 7, 11, 0.8); border: 1px solid var(--border); border-radius: 12px; color: white; outline: none; margin-bottom: 15px; }
+    input, select { width: 100%; padding: 12px 18px; background: rgba(3, 7, 18, 0.9); border: 1px solid var(--border); border-radius: 12px; color: white; outline: none; margin-bottom: 15px; }
 
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 1000; }
     .modal-overlay.active { display: flex; }
-    .modal-content { background: var(--card-bg); border: 1px solid var(--border); border-radius: 24px; padding: 35px; width: 100%; max-width: 500px; box-shadow: 0 25px 50px rgba(0,0,0,0.7); }
+    .modal-content { background: var(--card-bg); border: 1px solid var(--border); border-radius: 24px; padding: 35px; width: 100%; max-width: 500px; box-shadow: 0 25px 50px rgba(0,0,0,0.8); }
     
     .time-badge { font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 3px; }
-    .app-badge { background: rgba(56, 189, 248, 0.15); color: var(--primary); padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; display: inline-block; margin-top: 4px; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .app-badge { background: rgba(56, 189, 248, 0.15); color: var(--primary); padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; display: inline-block; border: 1px solid rgba(56, 189, 248, 0.3); }
     .map-link { color: var(--primary); text-decoration: none; font-weight: 600; }
-    .map-link:hover { text-decoration: underline; }
+
+    .btn-logout-admin { background: rgba(248, 113, 113, 0.15); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.3); width: 100%; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; display: block; transition: 0.2s; }
+    .btn-logout-admin:hover { background: rgba(248, 113, 113, 0.25); }
 
     @media print {
+      sidebar, header, .btn, .modal-overlay { display: none !important; }
+      main { margin: 0; padding: 0; width: 100%; color: black; }
       body { background: white; color: black; }
-      .glass-card { border: none; box-shadow: none; background: white; color: black; }
-      .btn, header, .modal-overlay { display: none !important; }
+      .glass-card { background: white; border: none; box-shadow: none; color: black; }
       table, th, td { color: black !important; border-bottom: 1px solid #ccc !important; }
     }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <header>
-    <div class="admin-badge">
-      <div class="avatar">👑</div>
-      <div>
-        <h3 style="font-size: 1.2rem;">Supervision Client (Admin)</h3>
-        <p style="font-size: 0.8rem; color: var(--text-muted);">Contrôle Global du Télétravail</p>
+  <!-- MENU LATÉRAL GAUCHE -->
+  <sidebar>
+    <div>
+      <div class="brand-area">
+        <div class="brand-logo">AK</div>
+        <div>
+          <div class="brand-name">AKSAM</div>
+          <div class="brand-sub">Console Admin</div>
+        </div>
+      </div>
+
+      <div class="nav-menu">
+        <a href="#" class="nav-item active">📊 Tableau de Bord</a>
+        <a href="#" class="nav-item" onclick="openModal()">➕ Nouvel Employé</a>
+        <a href="#" class="nav-item" onclick="exportExcel()">📥 Exporter Excel</a>
+        <a href="#" class="nav-item" onclick="window.print()">📄 Imprimer / PDF</a>
       </div>
     </div>
-    <a href="index.html" style="color: var(--danger); text-decoration: none; font-weight: 600; font-size: 0.9rem;">← Déconnexion Admin</a>
-  </header>
 
-  <div class="glass-card">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
-      <h2>👥 Répertoire, Horaires & Applications Actives</h2>
+    <div>
+      <a href="index.html" class="btn-logout-admin">⏻ Déconnexion Admin</a>
+    </div>
+  </sidebar>
+
+  <!-- CONTENU PRINCIPAL -->
+  <main>
+    <header>
+      <div>
+        <h2 style="font-size: 1.4rem;">Supervision du Télétravail</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Suivi en temps réel des collaborateurs AKSAM</p>
+      </div>
       <div style="display: flex; gap: 10px;">
-        <button class="btn btn-excel" onclick="exportExcel()">📊 Excel (CSV)</button>
-        <button class="btn btn-pdf" onclick="window.print()">📄 Imprimer / PDF</button>
-        <button class="btn btn-primary" id="open-modal-btn">+ Nouvel Employé</button>
+        <button class="btn btn-primary" onclick="openModal()">+ Nouvel Employé</button>
       </div>
-    </div>
-    
-    <table>
-      <thead>
-        <tr>
-          <th>Employé / Poste</th>
-          <th>Département</th>
-          <th>Statut</th>
-          <th>Logiciel / App Actif</th>
-          <th>Horaires (Début/Pause/Fin)</th>
-          <th>GPS (Carte)</th>
-          <th>Dernière Tâche</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody id="directory-body">
-        <tr><td colspan="8" style="color:var(--text-muted);">Chargement...</td></tr>
-      </tbody>
-    </table>
-  </div>
+    </header>
 
-  <div class="glass-card">
-    <h2>📊 Flux des Rapports de Tâches & Captures d'Écran</h2>
-    <div id="tasks-feed" style="margin-top: 15px;">
-      <p style="color: var(--text-muted);">Aucun rapport...</p>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL -->
-<div class="modal-overlay" id="employee-modal">
-  <div class="modal-content">
-    <h3>📝 Nouveau Compte Employé</h3>
-    <form id="add-employee-form">
-      <div>
-        <label style="font-size: 0.85rem; color: var(--text-muted);">Nom complet</label>
-        <input type="text" id="new-name" placeholder="Ex: Cledor Sow" required>
+    <!-- Répertoire -->
+    <div class="glass-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3>👥 Répertoire & Activité des Collaborateurs</h3>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-excel" onclick="exportExcel()">📊 Excel (CSV)</button>
+          <button class="btn btn-pdf" onclick="window.print()">📄 PDF</button>
+        </div>
       </div>
-      <div>
-        <label style="font-size: 0.85rem; color: var(--text-muted);">Code PIN secret</label>
-        <input type="password" id="new-pin" placeholder="Ex: 1234" required>
-      </div>
-      <div>
-        <label style="font-size: 0.85rem; color: var(--text-muted);">Poste / Intitulé</label>
-        <input type="text" id="new-role" placeholder="Ex: Développeur Full-Stack">
-      </div>
-      <div>
-        <label style="font-size: 0.85rem; color: var(--text-muted);">Département</label>
-        <select id="new-dept">
-          <option value="Informatique / IT">Informatique / IT</option>
-          <option value="Ressources Humaines">Ressources Humaines</option>
-          <option value="Operations">Opérations</option>
-          <option value="Commercial">Commercial</option>
-        </select>
-      </div>
-      <div style="display: flex; gap: 10px; margin-top: 10px;">
-        <button type="submit" class="btn btn-primary" style="flex:1;">Enregistrer</button>
-        <button type="button" class="btn btn-secondary" id="close-modal-btn">Annuler</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<script>
-  const modal = document.getElementById('employee-modal');
-  const openBtn = document.getElementById('open-modal-btn');
-  const closeBtn = document.getElementById('close-modal-btn');
-  const form = document.getElementById('add-employee-form');
-  let currentData = {};
-
-  openBtn.addEventListener('click', () => modal.classList.add('active'));
-  closeBtn.addEventListener('click', () => modal.classList.remove('active'));
-
-  async function fetchAdminData() {
-    try {
-      const res = await fetch('/api/admin/data');
-      const data = await res.json();
-      currentData = data;
       
-      const tbody = document.getElementById('directory-body');
-      tbody.innerHTML = '';
+      <table>
+        <thead>
+          <tr>
+            <th>Employé / Poste</th>
+            <th>Département</th>
+            <th>Statut</th>
+            <th>App Active</th>
+            <th>Horaires</th>
+            <th>GPS</th>
+            <th>Dernière Tâche</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="directory-body">
+          <tr><td colspan="8" style="color:var(--text-muted);">Chargement des données...</td></tr>
+        </tbody>
+      </table>
+    </div>
 
-      if (!data.statuses || Object.keys(data.statuses).length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text-muted);">Aucun employé.</td></tr>';
-      } else {
-        for (const [name, info] of Object.entries(data.statuses)) {
-          let pill = 'pill-offline', label = 'Hors ligne';
-          if(info.status === 'ONLINE') { pill = 'pill-online'; label = 'En service'; }
-          else if(info.status === 'PAUSE') { pill = 'pill-pause'; label = 'En pause'; }
+    <!-- Flux des Rapports -->
+    <div class="glass-card">
+      <h3>📊 Flux des Rapports & Captures d'Écran</h3>
+      <div id="tasks-feed" style="margin-top: 15px;">
+        <p style="color: var(--text-muted);">Aucun rapport récent...</p>
+      </div>
+    </div>
+  </main>
 
-          let gpsDisplay = info.location || 'Non localisé';
-          if (gpsDisplay.includes('Lat:')) {
-            const parts = gpsDisplay.split(',');
-            const lat = parts[0].replace('Lat:', '').trim();
-            const lng = parts[1].replace('Lng:', '').trim();
-            gpsDisplay = `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="map-link">📍 Voir carte</a>`;
+  <!-- MODAL : Création Employé -->
+  <div class="modal-overlay" id="employee-modal">
+    <div class="modal-content">
+      <h3>📝 Ajouter un Collaborateur AKSAM</h3>
+      <form id="add-employee-form" style="margin-top: 20px;">
+        <div>
+          <label style="font-size: 0.85rem; color: var(--text-muted);">Nom complet</label>
+          <input type="text" id="new-name" placeholder="Ex: Cledor Sow" required>
+        </div>
+        <div>
+          <label style="font-size: 0.85rem; color: var(--text-muted);">Code PIN secret</label>
+          <input type="password" id="new-pin" placeholder="Ex: 1234" required>
+        </div>
+        <div>
+          <label style="font-size: 0.85rem; color: var(--text-muted);">Poste / Intitulé</label>
+          <input type="text" id="new-role" placeholder="Ex: Développeur Full-Stack">
+        </div>
+        <div>
+          <label style="font-size: 0.85rem; color: var(--text-muted);">Département</label>
+          <select id="new-dept">
+            <option value="Informatique / IT">Informatique / IT</option>
+            <option value="Ressources Humaines">Ressources Humaines</option>
+            <option value="Operations">Opérations</option>
+            <option value="Commercial">Commercial</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+          <button type="submit" class="btn btn-primary" style="flex:1;">Enregistrer</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const modal = document.getElementById('employee-modal');
+    function openModal() { modal.classList.add('active'); }
+    function closeModal() { modal.classList.remove('active'); }
+    let currentData = {};
+
+    async function fetchAdminData() {
+      try {
+        const res = await fetch('/api/admin/data');
+        const data = await res.json();
+        currentData = data;
+        
+        const tbody = document.getElementById('directory-body');
+        tbody.innerHTML = '';
+
+        if (!data.statuses || Object.keys(data.statuses).length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text-muted);">Aucun employé.</td></tr>';
+        } else {
+          for (const [name, info] of Object.entries(data.statuses)) {
+            let pill = 'pill-offline', label = 'Hors ligne';
+            if(info.status === 'ONLINE') { pill = 'pill-online'; label = 'En service'; }
+            else if(info.status === 'PAUSE') { pill = 'pill-pause'; label = 'En pause'; }
+
+            let gpsDisplay = info.location || 'Non localisé';
+            if (gpsDisplay.includes('Lat:')) {
+              const parts = gpsDisplay.split(',');
+              const lat = parts[0].replace('Lat:', '').trim();
+              const lng = parts[1].replace('Lng:', '').trim();
+              gpsDisplay = `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="map-link">📍 Carte</a>`;
+            }
+
+            tbody.innerHTML += `
+              <tr>
+                <td><strong>👤 ${name}</strong><br><small style="color:var(--text-muted);">${info.role}</small></td>
+                <td>🏢 ${info.department}</td>
+                <td><span class="status-pill ${pill}">${label}</span></td>
+                <td><span class="app-badge">💻 ${info.currentApp}</span></td>
+                <td>
+                  <span class="time-badge">🟢 ${info.startTime}</span>
+                  <span class="time-badge">🟡 ${info.pauseTime}</span>
+                  <span class="time-badge">🔴 ${info.endTime}</span>
+                </td>
+                <td>${gpsDisplay}</td>
+                <td>💬 ${info.lastTask}</td>
+                <td><button class="btn btn-danger" style="padding: 6px 12px; font-size:0.8rem;" onclick="deleteEmployee('${name}')">Supprimer</button></td>
+              </tr>
+            `;
           }
-
-          tbody.innerHTML += `
-            <tr>
-              <td>
-                <strong>👤 ${name}</strong><br>
-                <small style="color:var(--text-muted);">${info.role || 'Employé'}</small>
-              </td>
-              <td>🏢 ${info.department || 'Général'}</td>
-              <td><span class="status-pill ${pill}">${label}</span></td>
-              <td><span class="app-badge">💻 ${info.currentApp || 'Non renseigné'}</span></td>
-              <td>
-                <span class="time-badge">🟢 Début : ${info.startTime}</span>
-                <span class="time-badge">🟡 Pause : ${info.pauseTime}</span>
-                <span class="time-badge">🔴 Fin : ${info.endTime}</span>
-              </td>
-              <td>${gpsDisplay}</td>
-              <td>💬 ${info.lastTask || 'Aucun'}</td>
-              <td><button class="btn btn-danger" style="padding: 6px 12px; font-size:0.8rem;" onclick="deleteEmployee('${name}')">Supprimer</button></td>
-            </tr>
-          `;
         }
-      }
 
-      const feed = document.getElementById('tasks-feed');
-      if (!data.tasks || data.tasks.length === 0) {
-        feed.innerHTML = '<p style="color: var(--text-muted);">Aucun rapport.</p>';
+        const feed = document.getElementById('tasks-feed');
+        if (!data.tasks || data.tasks.length === 0) {
+          feed.innerHTML = '<p style="color: var(--text-muted);">Aucun rapport.</p>';
+        } else {
+          feed.innerHTML = '';
+          data.tasks.forEach(t => {
+            let screenshotsHtml = '';
+            if (t.screenshots && t.screenshots.length > 0) {
+              screenshotsHtml = '<div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">';
+              t.screenshots.forEach(img => {
+                screenshotsHtml += `<a href="${img}" target="_blank"><img src="${img}" style="width: 80px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border);" title="Agrandir"></a>`;
+              });
+              screenshotsHtml += '</div>';
+            }
+
+            feed.innerHTML += `
+              <div style="background: rgba(3, 7, 18, 0.5); padding: 15px; border-radius: 14px; margin-bottom: 12px; border-left: 4px solid var(--primary);">
+                <strong>${t.employe}</strong> <span style="font-size:0.75rem; color:var(--text-muted); float:right;">${new Date(t.date).toLocaleTimeString()}</span>
+                <p style="margin-top: 6px; font-size:0.9rem;"><strong>App:</strong> ${t.currentApp} | ${t.tache}</p>
+                ${screenshotsHtml}
+              </div>
+            `;
+          });
+        }
+      } catch (err) {
+        console.error("Erreur admin", err);
+      }
+    }
+
+    function exportExcel() {
+      if (!currentData.statuses) return;
+      let csvContent = "data:text/csv;charset=utf-8,Employe;Poste;Departement;Statut;App Active;Debut;Pause;Fin;GPS;Derniere Tache\n";
+      for (const [name, info] of Object.entries(currentData.statuses)) {
+        csvContent += `${name};${info.role};${info.department};${info.status};${info.currentApp};${info.startTime};${info.pauseTime};${info.endTime};"${info.location}";"${info.lastTask}"\n`;
+      }
+      const link = document.createElement("a");
+      link.setAttribute("href", encodeURI(csvContent));
+      link.setAttribute("download", `AKSAM_Rapport_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    document.getElementById('add-employee-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        name: document.getElementById('new-name').value.trim(),
+        pin: document.getElementById('new-pin').value.trim(),
+        role: document.getElementById('new-role').value.trim() || 'Employé',
+        department: document.getElementById('new-dept').value
+      };
+      const res = await fetch('/api/admin/employes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        closeModal();
+        e.target.reset();
+        fetchAdminData();
       } else {
-        feed.innerHTML = '';
-        data.tasks.forEach(t => {
-          let screenshotsHtml = '';
-          if (t.screenshots && t.screenshots.length > 0) {
-            screenshotsHtml = '<div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">';
-            t.screenshots.forEach(img => {
-              screenshotsHtml += `<a href="${img}" target="_blank"><img src="${img}" style="width: 90px; height: 65px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); transition: 0.2s;" title="Cliquez pour agrandir"></a>`;
-            });
-            screenshotsHtml += '</div>';
-          }
-
-          feed.innerHTML += `
-            <div style="background: rgba(5, 7, 11, 0.4); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid var(--primary);">
-              <strong>${t.employe}</strong> <span style="font-size:0.75rem; color:var(--text-muted); float:right;">${new Date(t.date).toLocaleTimeString()}</span>
-              <p style="margin-top: 6px; font-size:0.95rem;"><strong>App:</strong> ${t.currentApp || 'N/A'} | ${t.tache}</p>
-              ${screenshotsHtml}
-            </div>
-          `;
-        });
+        const err = await res.json();
+        alert('Erreur : ' + err.message);
       }
-    } catch (err) {
-      console.error("Erreur", err);
-    }
-  }
-
-  function exportExcel() {
-    if (!currentData.statuses) return;
-    let csvContent = "data:text/csv;charset=utf-8,Employe;Poste;Departement;Statut;App Active;Heure Debut;Heure Pause;Heure Fin;Position;Derniere Tache\n";
-    for (const [name, info] of Object.entries(currentData.statuses)) {
-      csvContent += `${name};${info.role};${info.department};${info.status};${info.currentApp};${info.startTime};${info.pauseTime};${info.endTime};"${info.location}";"${info.lastTask}"\n`;
-    }
-    const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csvContent));
-    link.setAttribute("download", `Rapport_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const payload = {
-      name: document.getElementById('new-name').value.trim(),
-      pin: document.getElementById('new-pin').value.trim(),
-      role: document.getElementById('new-role').value.trim() || 'Employé',
-      department: document.getElementById('new-dept').value
-    };
-    const res = await fetch('/api/admin/employes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
     });
-    if (res.ok) {
-      modal.classList.remove('active');
-      form.reset();
-      fetchAdminData();
-    } else {
-      const err = await res.json();
-      alert('Erreur : ' + err.message);
+
+    async function deleteEmployee(name) {
+      if(confirm(`Supprimer ${name} ?`)) {
+        await fetch(`/api/admin/employes/${name}`, { method: 'DELETE' });
+        fetchAdminData();
+      }
     }
-  });
 
-  async function deleteEmployee(name) {
-    if(confirm(`Supprimer ${name} ?`)) {
-      await fetch(`/api/admin/employes/${name}`, { method: 'DELETE' });
-      fetchAdminData();
-    }
-  }
-
-  setInterval(fetchAdminData, 4000);
-  fetchAdminData();
-</script>
-
+    setInterval(fetchAdminData, 4000);
+    fetchAdminData();
+  </script>
 </body>
 </html>
