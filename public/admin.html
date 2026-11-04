@@ -41,7 +41,17 @@
     .btn { padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s; font-size: 0.9rem; }
     .btn-primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #05070b; }
     .btn-danger { background: var(--danger); color: white; }
-    input { padding: 12px 18px; background: rgba(5, 7, 11, 0.6); border: 1px solid var(--border); border-radius: 12px; color: white; outline: none; }
+    .btn-secondary { background: rgba(255, 255, 255, 0.1); color: white; }
+    
+    input, select { width: 100%; padding: 12px 18px; background: rgba(5, 7, 11, 0.8); border: 1px solid var(--border); border-radius: 12px; color: white; outline: none; margin-bottom: 15px; }
+
+    /* Modal / Formulaire surgissant */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+    .modal-overlay.active { display: flex; }
+    .modal-content { background: var(--card-bg); border: 1px solid var(--border); border-radius: 24px; padding: 35px; width: 100%; max-width: 500px; box-shadow: 0 25px 50px rgba(0,0,0,0.7); }
+    .modal-content h3 { margin-bottom: 20px; font-size: 1.4rem; color: var(--primary); }
+    .form-group { text-align: left; }
+    .form-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px; }
   </style>
 </head>
 <body>
@@ -58,27 +68,26 @@
     <a href="index.html" style="color: var(--danger); text-decoration: none; font-weight: 600; font-size: 0.9rem;">← Déconnexion Admin</a>
   </header>
 
-  <!-- Gestion & Création d'Employés -->
+  <!-- Répertoire & Actions -->
   <div class="glass-card">
-    <h2 style="margin-bottom: 20px;">👥 Répertoire & Création d'Accès Employés</h2>
-    <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-      <input type="text" id="new-name" placeholder="Nom de l'employé..." style="flex:2;">
-      <input type="password" id="new-pin" placeholder="Code PIN (ex: 1234)" style="flex:1;">
-      <button class="btn btn-primary" onclick="createEmployee()">+ Créer le compte</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2>👥 Répertoire des Employés</h2>
+      <button class="btn btn-primary" id="open-modal-btn">+ Nouvel Employé</button>
     </div>
     
     <table>
       <thead>
         <tr>
-          <th>Employé(e)</th>
-          <th>Statut en direct</th>
-          <th>Dernière Position GPS</th>
+          <th>Employé / Poste</th>
+          <th>Département</th>
+          <th>Statut</th>
+          <th>Position GPS</th>
           <th>Dernière Tâche</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody id="directory-body">
-        <tr><td colspan="5" style="color:var(--text-muted);">Chargement du répertoire...</td></tr>
+        <tr><td colspan="6" style="color:var(--text-muted);">Chargement du répertoire...</td></tr>
       </tbody>
     </table>
   </div>
@@ -92,7 +101,55 @@
   </div>
 </div>
 
+<!-- MODAL : Formulaire de création complet -->
+<div class="modal-overlay" id="employee-modal">
+  <div class="modal-content">
+    <h3>📝 Nouveau Compte Employé</h3>
+    <form id="add-employee-form">
+      <div class="form-group">
+        <label>Nom complet</label>
+        <input type="text" id="new-name" placeholder="Ex: Cledor Sow" required>
+      </div>
+      <div class="form-group">
+        <label>Code PIN secret (Connexion)</label>
+        <input type="password" id="new-pin" placeholder="Ex: 1234" required>
+      </div>
+      <div class="form-group">
+        <label>Poste / Intitulé</label>
+        <input type="text" id="new-role" placeholder="Ex: Développeur Full-Stack">
+      </div>
+      <div class="form-group">
+        <label>Département / Service</label>
+        <select id="new-dept">
+          <option value="Informatique / IT">Informatique / IT</option>
+          <option value="Ressources Humaines">Ressources Humaines</option>
+          <option value="Operations">Opérations</option>
+          <option value="Commercial">Commercial</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Numéro de Téléphone</label>
+        <input type="tel" id="new-phone" placeholder="Ex: +221 77 000 00 00">
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 10px;">
+        <button type="submit" class="btn btn-primary" style="flex:1;">Enregistrer</button>
+        <button type="button" class="btn btn-secondary" id="close-modal-btn">Annuler</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
+  const modal = document.getElementById('employee-modal');
+  const openBtn = document.getElementById('open-modal-btn');
+  const closeBtn = document.getElementById('close-modal-btn');
+  const form = document.getElementById('add-employee-form');
+
+  // Gestion du Modal
+  openBtn.addEventListener('click', () => modal.classList.add('active'));
+  closeBtn.addEventListener('click', () => modal.classList.remove('active'));
+
   async function fetchAdminData() {
     try {
       const res = await fetch('/api/admin/data');
@@ -101,8 +158,8 @@
       const tbody = document.getElementById('directory-body');
       tbody.innerHTML = '';
 
-      if (Object.keys(data.statuses).length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-muted);">Aucun employé enregistré dans le répertoire.</td></tr>';
+      if (!data.statuses || Object.keys(data.statuses).length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted);">Aucun employé enregistré.</td></tr>';
       } else {
         for (const [name, info] of Object.entries(data.statuses)) {
           let pill = 'pill-offline', label = 'Hors ligne';
@@ -111,7 +168,11 @@
 
           tbody.innerHTML += `
             <tr>
-              <td><strong>👤 ${name}</strong></td>
+              <td>
+                <strong>👤 ${name}</strong><br>
+                <small style="color:var(--text-muted);">${info.role || 'Employé'}</small>
+              </td>
+              <td>🏢 ${info.department || 'Général'}</td>
               <td><span class="status-pill ${pill}">${label}</span></td>
               <td>📍 ${info.location || 'Non localisé'}</td>
               <td>💬 ${info.lastTask || 'Aucun'}</td>
@@ -122,7 +183,7 @@
       }
 
       const feed = document.getElementById('tasks-feed');
-      if (data.tasks.length === 0) {
+      if (!data.tasks || data.tasks.length === 0) {
         feed.innerHTML = '<p style="color: var(--text-muted);">Aucun rapport soumis aujourd\'hui.</p>';
       } else {
         feed.innerHTML = '';
@@ -136,30 +197,42 @@
         });
       }
     } catch (err) {
-      console.error("Erreur de synchronisation admin", err);
+      console.error("Erreur de synchronisation", err);
     }
   }
 
-  async function createEmployee() {
-    const name = document.getElementById('new-name').value.trim();
-    const pin = document.getElementById('new-pin').value.trim();
-    if(!name || !pin) return alert('Veuillez remplir le nom et le code PIN.');
+  // Soumission du formulaire complet
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
     
-    const res = await fetch('/api/admin/employes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, pin })
-    });
-    
-    if(res.ok) {
-      document.getElementById('new-name').value = '';
-      document.getElementById('new-pin').value = '';
-      fetchAdminData();
-      alert(`Compte de ${name} créé avec succès !`);
-    } else {
-      alert('Erreur : cet employé existe peut-être déjà.');
+    const payload = {
+      name: document.getElementById('new-name').value.trim(),
+      pin: document.getElementById('new-pin').value.trim(),
+      role: document.getElementById('new-role').value.trim() || 'Employé',
+      department: document.getElementById('new-dept').value,
+      phone: document.getElementById('new-phone').value.trim()
+    };
+
+    try {
+      const res = await fetch('/api/admin/employes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        modal.classList.remove('active');
+        form.reset();
+        fetchAdminData();
+        alert(`Compte de ${payload.name} créé avec succès !`);
+      } else {
+        const errorData = await res.json();
+        alert('Erreur : ' + (errorData.message || 'Impossible de créer le compte.'));
+      }
+    } catch (err) {
+      alert('Erreur réseau lors de la création.');
     }
-  }
+  });
 
   async function deleteEmployee(name) {
     if(confirm(`Voulez-vous supprimer définitivement les accès de ${name} ?`)) {
