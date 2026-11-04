@@ -8,7 +8,7 @@
   <style>
     :root {
       --bg: #05070b;
-      --card-bg: rgba(13, 19, 33, 0.7);
+      --card-bg: rgba(13, 19, 33, 0.75);
       --border: rgba(56, 189, 248, 0.15);
       --primary: #38bdf8;
       --accent: #c084fc;
@@ -20,231 +20,212 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
-    body { background-color: var(--bg); color: var(--text); min-height: 100vh; background-image: radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.12) 0%, transparent 45%), radial-gradient(circle at 85% 85%, rgba(192, 132, 252, 0.12) 0%, transparent 45%); padding: 20px; }
-    .container { max-width: 900px; margin: 0 auto; }
+    body { background-color: var(--bg); color: var(--text); min-height: 100vh; background-image: radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.12) 0%, transparent 45%), radial-gradient(circle at 85% 85%, rgba(192, 132, 252, 0.12) 0%, transparent 45%); display: flex; justify-content: center; align-items: center; padding: 20px; }
+    
+    .container { width: 100%; max-width: 450px; }
+    
+    .glass-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 24px; padding: 40px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5); text-align: center; }
 
-    .view { display: none; }
-    .view.active { display: block; animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+    h1 { font-size: 2rem; margin-bottom: 10px; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    p.subtitle { color: var(--text-muted); margin-bottom: 30px; font-size: 0.95rem; }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: scale(0.98) translateY(10px); }
-      to { opacity: 1; transform: scale(1) translateY(0); }
-    }
+    .form-group { text-align: left; margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; }
+    
+    input, select, textarea { width: 100%; padding: 14px 18px; background: rgba(5, 7, 11, 0.8); border: 1px solid var(--border); border-radius: 12px; color: white; outline: none; font-size: 1rem; transition: 0.3s; }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
 
-    .glass-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 24px; padding: 30px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1); margin-bottom: 25px; }
+    .btn { width: 100%; padding: 14px; border-radius: 12px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s; font-size: 1rem; margin-bottom: 10px; }
+    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #05070b; box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3); }
+    .btn-primary:hover { box-shadow: 0 6px 20px rgba(56, 189, 248, 0.5); transform: translateY(-2px); }
+    
+    .btn-success { background: rgba(52, 211, 153, 0.15); color: var(--success); border: 1px solid var(--success); }
+    .btn-warning { background: rgba(251, 191, 36, 0.15); color: var(--warning); border: 1px solid var(--warning); }
+    .btn-danger { background: rgba(248, 113, 113, 0.15); color: var(--danger); border: 1px solid var(--danger); }
 
-    /* Login Box */
-    .login-box { max-width: 440px; margin: 60px auto; text-align: center; }
-    .login-box h1 { font-size: 2.2rem; font-weight: 700; margin-bottom: 6px; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .login-box p { color: var(--text-muted); margin-bottom: 30px; font-size: 0.95rem; }
+    #employee-dashboard { display: none; width: 100%; max-width: 500px; }
+    .user-info { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 25px; }
+    .avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #05070b; font-size: 1.4rem; }
 
-    .input-group { margin-bottom: 20px; text-align: left; }
-    .input-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
-    input, select, textarea { width: 100%; padding: 14px 18px; background: rgba(5, 7, 11, 0.6); border: 1px solid var(--border); border-radius: 14px; color: white; font-size: 1rem; outline: none; transition: 0.3s; }
-    input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 20px rgba(56, 189, 248, 0.25); }
-
-    .btn { width: 100%; padding: 14px; border-radius: 14px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s; font-size: 1rem; }
-    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #05070b; box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4); }
-    .btn-primary:hover { opacity: 0.95; transform: translateY(-2px); box-shadow: 0 6px 25px rgba(56, 189, 248, 0.6); }
-    .btn-success { background: var(--success); color: #05070b; }
-    .btn-warning { background: var(--warning); color: #05070b; }
-    .btn-danger { background: var(--danger); color: white; }
-
-    /* Header */
-    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: var(--card-bg); padding: 20px 30px; border-radius: 20px; border: 1px solid var(--border); backdrop-filter: blur(20px); }
-    .user-info { display: flex; align-items: center; gap: 15px; }
-    .avatar { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #05070b; font-size: 1.3rem; box-shadow: 0 0 15px rgba(56,189,248,0.4); }
-
-    .status-pill { padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; }
-    .pill-online { background: rgba(52, 211, 153, 0.15); color: var(--success); border: 1px solid rgba(52, 211, 153, 0.4); box-shadow: 0 0 15px rgba(52,211,153,0.2); }
-    .pill-pause { background: rgba(251, 191, 36, 0.15); color: var(--warning); border: 1px solid rgba(251, 191, 36, 0.4); }
-    .pill-offline { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); border: 1px solid rgba(148, 163, 184, 0.4); }
-
-    .grid-2 { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 25px; }
-    @media(max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
-    .action-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
   </style>
 </head>
 <body>
 
-<div class="container">
+  <!-- VUE : CONNEXION -->
+  <div class="container" id="login-view">
+    <div class="glass-card">
+      <h1>Nexus Connect</h1>
+      <p class="subtitle">Portail d'Accès Télétravail</p>
 
-  <!-- VUE : CONNEXION SÉCURISÉE -->
-  <div id="login-view" class="view active">
-    <div class="glass-card login-box">
-      <h1>Nexus Core</h1>
-      <p>Portail Sécurisé Télétravail & Présence</p>
-      
-      <form onsubmit="handleLogin(event)">
-        <div class="input-group">
-          <label>Type de Connexion</label>
-          <select id="login-role" onchange="toggleRoleFields()">
-            <option value="employee">Employé(e)</option>
-            <option value="admin">Administrateur (Client)</option>
+      <form id="login-form">
+        <div class="form-group">
+          <label>Je me connecte en tant que :</label>
+          <select id="role-select">
+            <option value="employee">Employé (Télétravailleur)</option>
+            <option value="admin">Administrateur (Supervision)</option>
           </select>
         </div>
 
-        <div class="input-group" id="emp-name-group">
-          <label>Votre Nom (ex: Cledor)</label>
-          <input type="text" id="login-name" placeholder="Entrez votre nom...">
+        <div class="form-group" id="name-group">
+          <label>Nom complet (Identifiant)</label>
+          <input type="text" id="login-name" placeholder="Ex: Cledor Sow">
         </div>
 
-        <div class="input-group">
-          <label>Code PIN / Clé d'accès</label>
-          <input type="password" id="login-pin" placeholder="••••" required>
+        <div class="form-group">
+          <label>Code PIN secret</label>
+          <input type="password" id="login-pin" placeholder="****" required>
         </div>
 
-        <button type="submit" class="btn btn-primary">Connexion au Système</button>
+        <button type="submit" class="btn btn-primary">Accéder à mon espace</button>
       </form>
+      <div id="login-error" style="color: var(--danger); margin-top: 15px; font-size: 0.85rem; display: none;">Identifiants incorrects.</div>
     </div>
   </div>
 
-  <!-- VUE : ESPACE EMPLOYÉ -->
-  <div id="employee-view" class="view">
-    <header>
+
+  <!-- VUE : TABLEAU DE BORD EMPLOYÉ -->
+  <div id="employee-dashboard">
+    <div class="glass-card">
       <div class="user-info">
-        <div class="avatar" id="emp-avatar">C</div>
+        <div class="avatar" id="user-initial">C</div>
         <div>
-          <h3 id="emp-title" style="font-size: 1.2rem;">Cledor</h3>
-          <p style="font-size: 0.8rem; color: var(--text-muted);" id="emp-clock">--:--:--</p>
-        </div>
-      </div>
-      <div>
-        <span id="emp-status-pill" class="status-pill pill-offline">Hors ligne</span>
-        <button onclick="logout()" style="background:none; border:none; color:var(--danger); cursor:pointer; margin-left:18px; font-weight:600; font-size:0.9rem;">Quitter</button>
-      </div>
-    </header>
-
-    <div class="grid-2">
-      <div class="glass-card">
-        <h2>⚡ Pointage en Direct</h2>
-        <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:20px;" id="geo-text">Satellite GPS : En attente d'activation...</p>
-        <div class="action-row">
-          <button class="btn btn-success" id="btn-on" onclick="setEmployeeStatus('ONLINE')">Service</button>
-          <button class="btn btn-warning" id="btn-pause" onclick="setEmployeeStatus('PAUSE')" disabled>Pause</button>
-          <button class="btn btn-danger" id="btn-off" onclick="setEmployeeStatus('OFFLINE')" disabled>Déco</button>
+          <h2 id="welcome-name">Bonjour, Cledor</h2>
+          <p style="color: var(--text-muted); font-size: 0.85rem;" id="current-status-text">Statut : Hors ligne</p>
         </div>
       </div>
 
-      <div class="glass-card">
-        <h2>📝 Rapport d'Activité</h2>
-        <form onsubmit="sendTaskReport(event)">
-          <textarea id="task-input" placeholder="Décrivez vos tâches du jour..." required style="height:120px; margin-bottom:15px; resize:none;"></textarea>
-          <button type="submit" class="btn btn-primary">Transmettre au Manager</button>
-        </form>
+      <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+        <button class="btn btn-success" onclick="updateStatus('ONLINE')">🟢 En Service</button>
+        <button class="btn btn-warning" onclick="updateStatus('PAUSE')">🟡 Pause</button>
+        <button class="btn btn-danger" onclick="updateStatus('OFFLINE')">🔴 Fin de service</button>
+      </div>
+
+      <div class="form-group" style="text-align: left;">
+        <label>Soumettre mon rapport de tâche :</label>
+        <textarea id="task-desc" rows="3" placeholder="Qu'avez-vous accompli ? (Ex: Développement module admin...)"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="submitTask()">Envoyer le rapport</button>
+      
+      <div style="margin-top: 25px; border-top: 1px solid var(--border); padding-top: 15px;">
+        <button class="btn" style="background: transparent; color: var(--danger); font-size: 0.9rem;" onclick="logout()">Se déconnecter</button>
       </div>
     </div>
   </div>
 
-</div>
+  <script>
+    let currentEmployee = '';
 
-<script>
-  let currentEmployee = null;
-
-  setInterval(() => {
-    if(document.getElementById('emp-clock')) {
-      document.getElementById('emp-clock').innerText = new Date().toLocaleTimeString();
-    }
-  }, 1000);
-
-  function toggleRoleFields() {
-    const role = document.getElementById('login-role').value;
-    document.getElementById('emp-name-group').style.display = (role === 'admin') ? 'none' : 'block';
-  }
-
-  async function handleLogin(e) {
-    e.preventDefault();
-    const role = document.getElementById('login-role').value;
-    const pin = document.getElementById('login-pin').value;
-    const name = document.getElementById('login-name').value.trim();
-
-    if (role === 'admin') {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'admin', pin })
-      });
-      const data = await res.json();
-      if(data.success) {
-        window.location.href = 'admin.html';
+    // Gérer l'affichage du champ "Nom" selon le rôle
+    document.getElementById('role-select').addEventListener('change', function(e) {
+      const nameGroup = document.getElementById('name-group');
+      if(e.target.value === 'admin') {
+        nameGroup.style.display = 'none';
       } else {
-        alert('Code PIN Admin incorrect (Utilisez 0000 par défaut)');
+        nameGroup.style.display = 'block';
       }
-    } else {
-      if(!name) return alert('Veuillez entrer votre nom.');
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'employee', name, pin })
-      });
-      const data = await res.json();
-      if(data.success) {
-        currentEmployee = data.name;
-        document.getElementById('login-view').classList.remove('active');
-        document.getElementById('employee-view').classList.add('active');
-        document.getElementById('emp-title').innerText = currentEmployee;
-        document.getElementById('emp-avatar').innerText = currentEmployee.charAt(0).toUpperCase();
-      } else {
-        alert('Identifiants incorrects ou employé non enregistré par l\'admin.');
-      }
-    }
-  }
+    });
 
-  function logout() {
-    currentEmployee = null;
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById('login-view').classList.add('active');
-  }
+    // Gestion de la Connexion
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const role = document.getElementById('role-select').value;
+      const name = document.getElementById('login-name').value.trim();
+      const pin = document.getElementById('login-pin').value.trim();
+      const errorDiv = document.getElementById('login-error');
+      
+      errorDiv.style.display = 'none';
 
-  async function setEmployeeStatus(status) {
-    let locationStr = "Non localisé";
-    if(navigator.geolocation && status === 'ONLINE') {
       try {
-        const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
-        locationStr = `${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)}`;
-        document.getElementById('geo-text').innerText = `Position GPS : ${locationStr}`;
-      } catch {
-        locationStr = "Géolocalisation bloquée";
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, pin, role })
+        });
+        
+        const data = await res.json();
+
+        if (data.success) {
+          if (data.role === 'admin') {
+            window.location.href = 'admin.html'; // Redirection Admin
+          } else {
+            // Affichage Tableau de bord employé
+            currentEmployee = data.name;
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('employee-dashboard').style.display = 'block';
+            document.getElementById('welcome-name').innerText = `Bonjour, ${currentEmployee}`;
+            document.getElementById('user-initial').innerText = currentEmployee.charAt(0).toUpperCase();
+          }
+        } else {
+          errorDiv.innerText = data.message || "Erreur de connexion";
+          errorDiv.style.display = 'block';
+        }
+      } catch (err) {
+        errorDiv.innerText = "Erreur serveur, réessayez plus tard.";
+        errorDiv.style.display = 'block';
+      }
+    });
+
+    // Mettre à jour le statut et la géolocalisation
+    async function updateStatus(status) {
+      const statusText = document.getElementById('current-status-text');
+      statusText.innerText = "Mise à jour en cours...";
+
+      let locationStr = "Non localisé (GPS désactivé)";
+
+      // Tenter de récupérer la position GPS si l'employé se met en service
+      if (status === 'ONLINE' && navigator.geolocation) {
+        try {
+          const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+          });
+          locationStr = `Lat: ${pos.coords.latitude.toFixed(4)}, Lng: ${pos.coords.longitude.toFixed(4)}`;
+        } catch(e) {
+          console.warn("GPS refusé ou indisponible");
+        }
+      }
+
+      try {
+        await fetch('/api/pointage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ employe: currentEmployee, status, location: locationStr })
+        });
+        
+        if(status === 'ONLINE') statusText.innerText = "Statut : 🟢 En service";
+        if(status === 'PAUSE') statusText.innerText = "Statut : 🟡 En pause";
+        if(status === 'OFFLINE') statusText.innerText = "Statut : 🔴 Hors ligne";
+        
+      } catch (err) {
+        alert("Erreur lors de la mise à jour du statut.");
       }
     }
 
-    const pill = document.getElementById('emp-status-pill');
-    if(status === 'ONLINE') {
-      pill.className = 'status-pill pill-online'; pill.innerText = 'En service';
-      document.getElementById('btn-on').disabled = true;
-      document.getElementById('btn-pause').disabled = false;
-      document.getElementById('btn-off').disabled = false;
-    } else if(status === 'PAUSE') {
-      pill.className = 'status-pill pill-pause'; pill.innerText = 'En pause';
-      document.getElementById('btn-on').disabled = false;
-      document.getElementById('btn-pause').disabled = true;
-      document.getElementById('btn-off').disabled = false;
-    } else {
-      pill.className = 'status-pill pill-offline'; pill.innerText = 'Hors ligne';
-      document.getElementById('btn-on').disabled = false;
-      document.getElementById('btn-pause').disabled = true;
-      document.getElementById('btn-off').disabled = true;
+    // Envoyer un rapport de tâche
+    async function submitTask() {
+      const tache = document.getElementById('task-desc').value.trim();
+      if (!tache) return alert("Veuillez décrire votre tâche avant d'envoyer.");
+
+      try {
+        await fetch('/api/taches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ employe: currentEmployee, tache })
+        });
+        alert("Rapport envoyé avec succès à l'administrateur !");
+        document.getElementById('task-desc').value = '';
+      } catch (err) {
+        alert("Erreur lors de l'envoi du rapport.");
+      }
     }
 
-    await fetch('/api/pointage', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ employe: currentEmployee, status, location: locationStr })
-    });
-  }
-
-  async function sendTaskReport(e) {
-    e.preventDefault();
-    const tache = document.getElementById('task-input').value;
-    await fetch('/api/taches', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ employe: currentEmployee, tache })
-    });
-    alert('Rapport transmis avec succès au dashboard client !');
-    document.getElementById('task-input').value = '';
-  }
-</script>
-
+    // Déconnexion
+    function logout() {
+      currentEmployee = '';
+      document.getElementById('employee-dashboard').style.display = 'none';
+      document.getElementById('login-view').style.display = 'block';
+      document.getElementById('login-form').reset();
+    }
+  </script>
 </body>
 </html>
