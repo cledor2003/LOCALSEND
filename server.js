@@ -4,7 +4,7 @@ const path = require('path');
 const mongoose = require('mongoose');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -32,7 +32,6 @@ const Task = mongoose.model('Task', taskSchema);
 
 // --- ROUTES API ---
 
-// Authentification
 app.post('/api/login', async (req, res) => {
     const { name, pin, role } = req.body;
     
@@ -47,27 +46,20 @@ app.post('/api/login', async (req, res) => {
         if (emp) return res.json({ success: true, role: 'employee', name: emp.name });
         res.status(401).json({ success: false, message: 'Identifiants invalides' });
     } catch (err) {
-        console.error("Erreur login:", err);
         res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
 });
 
-// Pointage GPS et Statut
 app.post('/api/pointage', async (req, res) => {
     const { employe, status, location } = req.body;
     try {
-        await Employee.findOneAndUpdate(
-            { name: employe }, 
-            { status, location: location || 'GPS Actif' }
-        );
+        await Employee.findOneAndUpdate({ name: employe }, { status, location: location || 'GPS Actif' });
         res.json({ success: true });
     } catch (err) {
-        console.error("Erreur pointage:", err);
         res.status(500).json({ success: false });
     }
 });
 
-// Rapport de tâches
 app.post('/api/taches', async (req, res) => {
     const { employe, tache } = req.body;
     try {
@@ -75,12 +67,10 @@ app.post('/api/taches', async (req, res) => {
         await Employee.findOneAndUpdate({ name: employe }, { lastTask: tache });
         res.json({ success: true });
     } catch (err) {
-        console.error("Erreur tâches:", err);
         res.status(500).json({ success: false });
     }
 });
 
-// Admin : Récupérer toutes les données en temps réel depuis MongoDB
 app.get('/api/admin/data', async (req, res) => {
     try {
         const employees = await Employee.find({});
@@ -99,12 +89,10 @@ app.get('/api/admin/data', async (req, res) => {
 
         res.json({ statuses, tasks });
     } catch (err) {
-        console.error("Erreur admin data:", err);
         res.status(500).json({ success: false });
     }
 });
 
-// Admin : Créer un employé dans MongoDB
 app.post('/api/admin/employes', async (req, res) => {
     const { name, pin, role, department, phone } = req.body;
     if (!name || !pin) {
@@ -117,39 +105,26 @@ app.post('/api/admin/employes', async (req, res) => {
         }
 
         await Employee.create({ 
-            name, 
-            pin, 
-            role: role || 'Employé', 
-            department: department || 'Général',
-            phone: phone || '',
-            status: 'OFFLINE', 
-            location: 'Non localisé', 
-            lastTask: 'Aucun' 
+            name, pin, role: role || 'Employé', department: department || 'Général',
+            phone: phone || '', status: 'OFFLINE', location: 'Non localisé', lastTask: 'Aucun' 
         });
         res.json({ success: true, message: 'Employé créé avec succès' });
     } catch (error) {
-        console.error("Erreur création employé:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// Admin : Supprimer un employé de MongoDB
 app.delete('/api/admin/employes/:name', async (req, res) => {
     try {
         await Employee.findOneAndDelete({ name: req.params.name });
         res.json({ success: true });
     } catch (err) {
-        console.error("Erreur suppression:", err);
         res.status(500).json({ success: false });
     }
 });
 
-// Connexion MongoDB Atlas PUIS démarrage du serveur
-const MONGO_URI = process.env.MONGO_URI;
-
-if (!MONGO_URI) {
-    console.error("ERREUR FATALE: La variable d environnement MONGO_URI n est pas définie sur Render !");
-}
+// Récupération sécurisée de l'URI MongoDB (prend en compte MONGODB_URI ou MONGO_URI)
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || "mongodb+srv://sowcledor400_db_user:Aksam2026DbPass@cluster0.41hehnt.mongodb.net/pointage?retryWrites=true&w=majority";
 
 mongoose.connect(MONGO_URI)
   .then(() => {
