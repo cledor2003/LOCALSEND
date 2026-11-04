@@ -6,7 +6,9 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-app.use(bodyParser.json());
+// Augmentation de la limite de taille pour accepter les images en base64
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const DATA_FILE = path.join(__dirname, 'data.json');
@@ -47,7 +49,6 @@ app.post('/api/login', (req, res) => {
     res.status(401).json({ success: false, message: 'Identifiants invalides' });
 });
 
-// Enregistrement des Statuts, Horaires et Application active
 app.post('/api/pointage', (req, res) => {
     const { employe, status, location, currentApp } = req.body;
     const db = loadData();
@@ -59,7 +60,6 @@ app.post('/api/pointage', (req, res) => {
         if (currentApp) emp.currentApp = currentApp;
         
         const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        
         if (status === 'ONLINE') emp.startTime = now;
         if (status === 'PAUSE') emp.pauseTime = now;
         if (status === 'OFFLINE') emp.endTime = now;
@@ -70,11 +70,19 @@ app.post('/api/pointage', (req, res) => {
     res.status(404).json({ success: false, message: 'Employé non trouvé' });
 });
 
+// Enregistrement de la tâche avec les captures d'écran (5 max)
 app.post('/api/taches', (req, res) => {
-    const { employe, tache, currentApp } = req.body;
+    const { employe, tache, currentApp, screenshots } = req.body;
     const db = loadData();
     
-    db.tasks.unshift({ employe, tache, currentApp: currentApp || 'Non spécifié', date: new Date() });
+    db.tasks.unshift({ 
+        employe, 
+        tache, 
+        currentApp: currentApp || 'Non spécifié', 
+        screenshots: screenshots || [], 
+        date: new Date() 
+    });
+
     const emp = db.employees.find(e => e.name === employe);
     if (emp) {
         emp.lastTask = tache;

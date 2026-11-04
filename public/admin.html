@@ -108,7 +108,7 @@
   </div>
 
   <div class="glass-card">
-    <h2>📊 Flux des Rapports de Tâches Journaliers</h2>
+    <h2>📊 Flux des Rapports de Tâches & Captures d'Écran</h2>
     <div id="tasks-feed" style="margin-top: 15px;">
       <p style="color: var(--text-muted);">Aucun rapport...</p>
     </div>
@@ -212,10 +212,20 @@
       } else {
         feed.innerHTML = '';
         data.tasks.forEach(t => {
+          let screenshotsHtml = '';
+          if (t.screenshots && t.screenshots.length > 0) {
+            screenshotsHtml = '<div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">';
+            t.screenshots.forEach(img => {
+              screenshotsHtml += `<a href="${img}" target="_blank"><img src="${img}" style="width: 90px; height: 65px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); transition: 0.2s;" title="Cliquez pour agrandir"></a>`;
+            });
+            screenshotsHtml += '</div>';
+          }
+
           feed.innerHTML += `
-            <div style="background: rgba(5, 7, 11, 0.4); padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid var(--primary);">
+            <div style="background: rgba(5, 7, 11, 0.4); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid var(--primary);">
               <strong>${t.employe}</strong> <span style="font-size:0.75rem; color:var(--text-muted); float:right;">${new Date(t.date).toLocaleTimeString()}</span>
               <p style="margin-top: 6px; font-size:0.95rem;"><strong>App:</strong> ${t.currentApp || 'N/A'} | ${t.tache}</p>
+              ${screenshotsHtml}
             </div>
           `;
         });

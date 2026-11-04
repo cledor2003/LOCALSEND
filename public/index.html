@@ -22,7 +22,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
     body { background-color: var(--bg); color: var(--text); min-height: 100vh; background-image: radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.12) 0%, transparent 45%), radial-gradient(circle at 85% 85%, rgba(192, 132, 252, 0.12) 0%, transparent 45%); display: flex; justify-content: center; align-items: center; padding: 20px; }
     
-    .container { width: 100%; max-width: 450px; }
+    .container { width: 100%; max-width: 480px; }
     .glass-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 24px; padding: 40px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5); text-align: center; }
 
     h1 { font-size: 2rem; margin-bottom: 10px; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -40,7 +40,7 @@
     .btn-warning { background: rgba(251, 191, 36, 0.15); color: var(--warning); border: 1px solid var(--warning); }
     .btn-danger { background: rgba(248, 113, 113, 0.15); color: var(--danger); border: 1px solid var(--danger); }
 
-    #employee-dashboard { display: none; width: 100%; max-width: 500px; }
+    #employee-dashboard { display: none; width: 100%; max-width: 520px; }
     .user-info { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 25px; }
     .avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #05070b; font-size: 1.4rem; }
   </style>
@@ -101,10 +101,17 @@
       </div>
 
       <div class="form-group" style="text-align: left;">
-        <label>📝 Soumettre mon rapport de tâche :</label>
+        <label>📝 Rapport de tâche et avancement :</label>
         <textarea id="task-desc" rows="3" placeholder="Qu'avez-vous accompli ?"></textarea>
       </div>
-      <button class="btn btn-primary" onclick="submitTask()">Envoyer le rapport</button>
+
+      <div class="form-group" style="text-align: left;">
+        <label>📸 Captures d'écran justificatives (5 Max) :</label>
+        <input type="file" id="task-screenshots" accept="image/*" multiple style="padding: 10px; background: rgba(5,7,11,0.8); border: 1px solid var(--border); border-radius: 12px; color: white;">
+        <small style="color: var(--text-muted); display: block; margin-top: 5px; font-size: 0.75rem;">Sélectionnez jusqu'à 5 images de votre travail.</small>
+      </div>
+
+      <button class="btn btn-primary" onclick="submitTask()">Envoyer le rapport avec preuves</button>
       
       <div style="margin-top: 25px; border-top: 1px solid var(--border); padding-top: 15px;">
         <button class="btn" style="background: transparent; color: var(--danger); font-size: 0.9rem;" onclick="logout()">Se déconnecter</button>
@@ -115,7 +122,7 @@
   <script>
     let currentEmployee = '';
     let inactivityTimer;
-    const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutes d'inactivité max
+    const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutes
 
     document.getElementById('role-select').addEventListener('change', function(e) {
       const nameGroup = document.getElementById('name-group');
@@ -148,8 +155,6 @@
             document.getElementById('employee-dashboard').style.display = 'block';
             document.getElementById('welcome-name').innerText = `Bonjour, ${currentEmployee}`;
             document.getElementById('user-initial').innerText = currentEmployee.charAt(0).toUpperCase();
-            
-            // Activer la surveillance d'inactivité
             initInactivityDetector();
           }
         } else {
@@ -164,7 +169,6 @@
 
     async function updateStatus(status) {
       const appName = document.getElementById('current-app').value.trim() || 'Non spécifié';
-
       let locationStr = "Non localisé";
       if (status === 'ONLINE' && navigator.geolocation) {
         try {
@@ -195,12 +199,10 @@
       }
     }
 
-    // --- SYSTEME DE DETECTION D'INACTIVITE AUTOMATIQUE ---
     function initInactivityDetector() {
       const resetTimer = () => {
         clearTimeout(inactivityTimer);
         inactivityTimer = setTimeout(() => {
-          // Si l'employé était en ligne et ne touche plus à rien pendant 10 minutes
           autoSwitchToPause();
         }, INACTIVITY_LIMIT);
       };
@@ -220,26 +222,47 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ employe: currentEmployee, status: 'PAUSE', currentApp: 'Inactif (Absence de mouvement)' })
         });
-        document.getElementById('current-status-text').innerText = "Statut : 🟡 En pause (Inactivité prolongée)";
-        alert("⚠️ Vous avez été basculé automatiquement en 'Pause' suite à 10 minutes d'inactivité sur la page.");
+        document.getElementById('current-status-text').innerText = "Statut : 🟡 En pause (Inactivité)";
+        alert("⚠️ Basculement automatique en 'Pause' suite à 10 minutes d'inactivité.");
       } catch (e) {
         console.error("Erreur auto-pause", e);
       }
     }
 
+    const toBase64 = file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+
     async function submitTask() {
       const tache = document.getElementById('task-desc').value.trim();
       const appName = document.getElementById('current-app').value.trim();
+      const fileInput = document.getElementById('task-screenshots');
+
       if (!tache) return alert("Veuillez décrire votre tâche.");
+
+      let screenshots = [];
+      if (fileInput.files.length > 0) {
+        if (fileInput.files.length > 5) {
+          return alert("⚠️ Maximum 5 captures d'écran autorisées par rapport.");
+        }
+        for (let i = 0; i < fileInput.files.length; i++) {
+          const base64 = await toBase64(fileInput.files[i]);
+          screenshots.push(base64);
+        }
+      }
 
       try {
         await fetch('/api/taches', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ employe: currentEmployee, tache, currentApp: appName })
+          body: JSON.stringify({ employe: currentEmployee, tache, currentApp: appName, screenshots })
         });
-        alert("Rapport envoyé !");
+        alert("Rapport et captures envoyés avec succès !");
         document.getElementById('task-desc').value = '';
+        fileInput.value = '';
       } catch (err) {
         alert("Erreur lors de l'envoi.");
       }
