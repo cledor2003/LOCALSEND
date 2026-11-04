@@ -9,16 +9,16 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Connexion MongoDB (ou fallback local)
+// Connexion MongoDB Atlas (via la variable d'environnement sur Render)
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/teletravail_db';
-mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(MONGO_URI)
   .then(() => console.log('Connecté à MongoDB avec succès'))
-  .catch(err => console.log('Erreur de connexion MongoDB (Mode local actif)', err.message));
+  .catch(err => console.log('Erreur de connexion MongoDB:', err.message));
 
 // Schémas Mongoose
 const employeeSchema = new mongoose.Schema({
     name: { type: String, unique: true, required: true },
-    pin: { type: String, required: true }, // Code secret pour l'accès sécurisé
+    pin: { type: String, required: true },
     status: { type: String, default: 'OFFLINE' },
     location: { type: String, default: 'Non localisé' },
     lastTask: { type: String, default: 'Aucun rapport' }
@@ -35,11 +35,14 @@ const Task = mongoose.model('Task', taskSchema);
 
 // --- ROUTES API ---
 
-// Authentification Employé / Admin
+// Authentification
 app.post('/api/login', async (req, res) => {
     const { name, pin, role } = req.body;
+    
     if (role === 'admin') {
-        if (pin === '0000') return res.json({ success: true, role: 'admin' });
+        // Utilise la variable d'environnement Render ou '0000' par défaut
+        const adminPass = process.env.ADMIN_PASSWORD || '0000';
+        if (pin === adminPass) return res.json({ success: true, role: 'admin' });
         return res.status(401).json({ success: false, message: 'Code admin incorrect' });
     }
 
@@ -47,7 +50,7 @@ app.post('/api/login', async (req, res) => {
         const emp = await Employee.findOne({ name, pin });
         if (emp) return res.json({ success: true, role: 'employee', name: emp.name });
         res.status(401).json({ success: false, message: 'Identifiants invalides' });
-    } catch {
+    } catch (err) {
         res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
 });
@@ -58,7 +61,7 @@ app.post('/api/pointage', async (req, res) => {
     try {
         await Employee.findOneAndUpdate({ name: employe }, { status, location: location || 'GPS Actif' });
         res.json({ success: true });
-    } catch {
+    } catch (err) {
         res.status(500).json({ success: false });
     }
 });
@@ -70,37 +73,46 @@ app.post('/api/taches', async (req, res) => {
         await Task.create({ employe, tache });
         await Employee.findOneAndUpdate({ name: employe }, { lastTask: tache });
         res.json({ success: true });
-    } catch {
+    } catch (err) {
         res.status(500).json({ success: false });
     }
 });
 
-// Admin : Données globales (Répertoire + Flux)
+// Admin : Données globales
 app.get('/api/admin/data', async (req, res) => {
     try {
         const employees = await Employee.find({});
         const tasks = await Task.find({}).sort({ date: -1 }).limit(20);
         
-        // Formatage pour correspondre au front
         let statuses = {};
         employees.forEach(e => {
             statuses[e.name] = { status: e.status, location: e.location, lastTask: e.lastTask };
         });
 
         res.json({ statuses, tasks });
-    } catch {
+    } catch (err) {
         res.status(500).json({ success: false });
     }
 });
 
-// Admin : Créer un employé
+// Admin : Créer un employé (Corrigé et sécurisé)
 app.post('/api/admin/employes', async (req, res) => {
     const { name, pin } = req.body;
+    if (!name || !pin) {
+        return res.status(400).json({ success: false, message: 'Nom et PIN requis' });
+    }
     try {
-        await Employee.create({ name, pin: pin || '1234' });
-        res.json({ success: true });
-    } catch {
-        res.status(400).json({ success: false, message: 'Employé déjà existant ou données invalides' });
+        // Vérifier si l'employé existe déjà
+        const existing = await Employee.findOne({ name });
+        if (existing) {
+            return res.status(400).json({ success: false, message: 'Cet employé existe déjà' });
+        }
+
+        await Employee.create({ name, pin, status: 'OFFLINE', location: 'Non localisé', lastTask: 'Aucun' });
+        res.json({ success: true, message: 'Employé créé avec succès' });
+    } catch (error) {
+        console.error("Erreur création:", error);
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 
@@ -109,11 +121,11 @@ app.delete('/api/admin/employes/:name', async (req, res) => {
     try {
         await Employee.findOneAndDelete({ name: req.params.name });
         res.json({ success: true });
-    } catch {
+    } catch (err) {
         res.status(500).json({ success: false });
     }
 });
 
 app.listen(PORT, () => {
-    console.log(`Serveur Nexus Télétravail démarré sur le port ${PORT}`);
+    console.log(`Serveur démarré sur le port ${PORT}`);
 });
