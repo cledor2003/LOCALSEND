@@ -23,7 +23,6 @@
     body { background-color: var(--bg); color: var(--text); min-height: 100vh; background-image: radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.12) 0%, transparent 45%), radial-gradient(circle at 85% 85%, rgba(192, 132, 252, 0.12) 0%, transparent 45%); display: flex; justify-content: center; align-items: center; padding: 20px; }
     
     .container { width: 100%; max-width: 450px; }
-    
     .glass-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 24px; padding: 40px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5); text-align: center; }
 
     h1 { font-size: 2rem; margin-bottom: 10px; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -36,9 +35,7 @@
     input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
 
     .btn { width: 100%; padding: 14px; border-radius: 12px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s; font-size: 1rem; margin-bottom: 10px; }
-    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #05070b; box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3); }
-    .btn-primary:hover { box-shadow: 0 6px 20px rgba(56, 189, 248, 0.5); transform: translateY(-2px); }
-    
+    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #05070b; }
     .btn-success { background: rgba(52, 211, 153, 0.15); color: var(--success); border: 1px solid var(--success); }
     .btn-warning { background: rgba(251, 191, 36, 0.15); color: var(--warning); border: 1px solid var(--warning); }
     .btn-danger { background: rgba(248, 113, 113, 0.15); color: var(--danger); border: 1px solid var(--danger); }
@@ -46,7 +43,6 @@
     #employee-dashboard { display: none; width: 100%; max-width: 500px; }
     .user-info { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 25px; }
     .avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #05070b; font-size: 1.4rem; }
-
   </style>
 </head>
 <body>
@@ -78,10 +74,9 @@
 
         <button type="submit" class="btn btn-primary">Accéder à mon espace</button>
       </form>
-      <div id="login-error" style="color: var(--danger); margin-top: 15px; font-size: 0.85rem; display: none;">Identifiants incorrects.</div>
+      <div id="login-error" style="color: var(--danger); margin-top: 15px; font-size: 0.85rem; display: none;"></div>
     </div>
   </div>
-
 
   <!-- VUE : TABLEAU DE BORD EMPLOYÉ -->
   <div id="employee-dashboard">
@@ -89,20 +84,25 @@
       <div class="user-info">
         <div class="avatar" id="user-initial">C</div>
         <div>
-          <h2 id="welcome-name">Bonjour, Cledor</h2>
+          <h2 id="welcome-name">Bonjour</h2>
           <p style="color: var(--text-muted); font-size: 0.85rem;" id="current-status-text">Statut : Hors ligne</p>
         </div>
       </div>
 
-      <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+      <div class="form-group" style="text-align: left;">
+        <label>💻 Application ou Outil actif (Obligatoire pour prouver l'activité) :</label>
+        <input type="text" id="current-app" placeholder="Ex: VS Code, Excel, Navigateur..." required>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-bottom: 20px;">
         <button class="btn btn-success" onclick="updateStatus('ONLINE')">🟢 En Service</button>
         <button class="btn btn-warning" onclick="updateStatus('PAUSE')">🟡 Pause</button>
         <button class="btn btn-danger" onclick="updateStatus('OFFLINE')">🔴 Fin de service</button>
       </div>
 
       <div class="form-group" style="text-align: left;">
-        <label>Soumettre mon rapport de tâche :</label>
-        <textarea id="task-desc" rows="3" placeholder="Qu'avez-vous accompli ? (Ex: Développement module admin...)"></textarea>
+        <label>📝 Soumettre mon rapport de tâche :</label>
+        <textarea id="task-desc" rows="3" placeholder="Qu'avez-vous accompli ?"></textarea>
       </div>
       <button class="btn btn-primary" onclick="submitTask()">Envoyer le rapport</button>
       
@@ -115,20 +115,13 @@
   <script>
     let currentEmployee = '';
 
-    // Gérer l'affichage du champ "Nom" selon le rôle
     document.getElementById('role-select').addEventListener('change', function(e) {
       const nameGroup = document.getElementById('name-group');
-      if(e.target.value === 'admin') {
-        nameGroup.style.display = 'none';
-      } else {
-        nameGroup.style.display = 'block';
-      }
+      nameGroup.style.display = (e.target.value === 'admin') ? 'none' : 'block';
     });
 
-    // Gestion de la Connexion
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      
       const role = document.getElementById('role-select').value;
       const name = document.getElementById('login-name').value.trim();
       const pin = document.getElementById('login-pin').value.trim();
@@ -142,14 +135,12 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, pin, role })
         });
-        
         const data = await res.json();
 
         if (data.success) {
           if (data.role === 'admin') {
-            window.location.href = 'admin.html'; // Redirection Admin
+            window.location.href = 'admin.html';
           } else {
-            // Affichage Tableau de bord employé
             currentEmployee = data.name;
             document.getElementById('login-view').style.display = 'none';
             document.getElementById('employee-dashboard').style.display = 'block';
@@ -157,31 +148,31 @@
             document.getElementById('user-initial').innerText = currentEmployee.charAt(0).toUpperCase();
           }
         } else {
-          errorDiv.innerText = data.message || "Erreur de connexion";
+          errorDiv.innerText = data.message || "Identifiants incorrects";
           errorDiv.style.display = 'block';
         }
       } catch (err) {
-        errorDiv.innerText = "Erreur serveur, réessayez plus tard.";
+        errorDiv.innerText = "Erreur serveur.";
         errorDiv.style.display = 'block';
       }
     });
 
-    // Mettre à jour le statut et la géolocalisation
     async function updateStatus(status) {
-      const statusText = document.getElementById('current-status-text');
-      statusText.innerText = "Mise à jour en cours...";
+      const appName = document.getElementById('current-app').value.trim();
+      if (!appName) {
+        alert("Veuillez renseigner l'application ou l'outil que vous utilisez sur votre machine avant de changer de statut !");
+        return;
+      }
 
-      let locationStr = "Non localisé (GPS désactivé)";
-
-      // Tenter de récupérer la position GPS si l'employé se met en service
+      let locationStr = "Non localisé";
       if (status === 'ONLINE' && navigator.geolocation) {
         try {
           const pos = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 });
           });
           locationStr = `Lat: ${pos.coords.latitude.toFixed(4)}, Lng: ${pos.coords.longitude.toFixed(4)}`;
         } catch(e) {
-          console.warn("GPS refusé ou indisponible");
+          locationStr = "GPS refusé";
         }
       }
 
@@ -189,37 +180,37 @@
         await fetch('/api/pointage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ employe: currentEmployee, status, location: locationStr })
+          body: JSON.stringify({ employe: currentEmployee, status, location: locationStr, currentApp: appName })
         });
         
-        if(status === 'ONLINE') statusText.innerText = "Statut : 🟢 En service";
+        const statusText = document.getElementById('current-status-text');
+        if(status === 'ONLINE') statusText.innerText = `Statut : 🟢 En service (${appName})`;
         if(status === 'PAUSE') statusText.innerText = "Statut : 🟡 En pause";
         if(status === 'OFFLINE') statusText.innerText = "Statut : 🔴 Hors ligne";
-        
+        alert("Statut mis à jour avec succès !");
       } catch (err) {
-        alert("Erreur lors de la mise à jour du statut.");
+        alert("Erreur lors de la mise à jour.");
       }
     }
 
-    // Envoyer un rapport de tâche
     async function submitTask() {
       const tache = document.getElementById('task-desc').value.trim();
-      if (!tache) return alert("Veuillez décrire votre tâche avant d'envoyer.");
+      const appName = document.getElementById('current-app').value.trim();
+      if (!tache) return alert("Veuillez décrire votre tâche.");
 
       try {
         await fetch('/api/taches', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ employe: currentEmployee, tache })
+          body: JSON.stringify({ employe: currentEmployee, tache, currentApp: appName })
         });
-        alert("Rapport envoyé avec succès à l'administrateur !");
+        alert("Rapport envoyé !");
         document.getElementById('task-desc').value = '';
       } catch (err) {
-        alert("Erreur lors de l'envoi du rapport.");
+        alert("Erreur lors de l'envoi.");
       }
     }
 
-    // Déconnexion
     function logout() {
       currentEmployee = '';
       document.getElementById('employee-dashboard').style.display = 'none';

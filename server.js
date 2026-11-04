@@ -9,15 +9,13 @@ const PORT = process.env.PORT || 10000;
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Fichier de stockage local persistant sur le serveur
 const DATA_FILE = path.join(__dirname, 'data.json');
 
-// Charger ou initialiser les données
 function loadData() {
     if (!fs.existsSync(DATA_FILE)) {
         const initialData = {
             employees: [
-                { name: 'admin', pin: '0000', role: 'Administrateur', department: 'Direction', phone: '', status: 'OFFLINE', location: 'Non localisé', lastTask: 'Aucun' }
+                { name: 'admin', pin: '0000', role: 'Administrateur', department: 'Direction', status: 'OFFLINE', location: 'Non localisé', lastTask: 'Aucun', startTime: '--:--', pauseTime: '--:--', endTime: '--:--', currentApp: 'Aucune' }
             ],
             tasks: []
         };
@@ -32,7 +30,6 @@ function saveData(data) {
 
 // --- ROUTES API ---
 
-// Authentification
 app.post('/api/login', (req, res) => {
     const { name, pin, role } = req.body;
     const db = loadData();
@@ -50,57 +47,67 @@ app.post('/api/login', (req, res) => {
     res.status(401).json({ success: false, message: 'Identifiants invalides' });
 });
 
-// Pointage GPS et Statut
+// Enregistrement des Statuts, Horaires et Application active
 app.post('/api/pointage', (req, res) => {
-    const { employe, status, location } = req.body;
+    const { employe, status, location, currentApp } = req.body;
     const db = loadData();
     const emp = db.employees.find(e => e.name === employe);
+    
     if (emp) {
         emp.status = status;
-        emp.location = location || 'GPS Actif';
+        if (location) emp.location = location;
+        if (currentApp) emp.currentApp = currentApp;
+        
+        const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        
+        if (status === 'ONLINE') emp.startTime = now;
+        if (status === 'PAUSE') emp.pauseTime = now;
+        if (status === 'OFFLINE') emp.endTime = now;
+
         saveData(db);
         return res.json({ success: true });
     }
     res.status(404).json({ success: false, message: 'Employé non trouvé' });
 });
 
-// Rapport de tâches
 app.post('/api/taches', (req, res) => {
-    const { employe, tache } = req.body;
+    const { employe, tache, currentApp } = req.body;
     const db = loadData();
     
-    db.tasks.unshift({ employe, tache, date: new Date() });
+    db.tasks.unshift({ employe, tache, currentApp: currentApp || 'Non spécifié', date: new Date() });
     const emp = db.employees.find(e => e.name === employe);
     if (emp) {
         emp.lastTask = tache;
+        if (currentApp) emp.currentApp = currentApp;
     }
+
     saveData(db);
     res.json({ success: true });
 });
 
-// Admin : Récupérer toutes les données
 app.get('/api/admin/data', (req, res) => {
     const db = loadData();
     let statuses = {};
     db.employees.forEach(e => {
         statuses[e.name] = { 
-            status: e.status, 
-            location: e.location, 
-            lastTask: e.lastTask,
-            role: e.role,
-            department: e.department 
+            status: e.status || 'OFFLINE', 
+            location: e.location || 'Non localisé', 
+            lastTask: e.lastTask || 'Aucun',
+            role: e.role || 'Employé',
+            department: e.department || 'Général',
+            startTime: e.startTime || '--:--',
+            pauseTime: e.pauseTime || '--:--',
+            endTime: e.endTime || '--:--',
+            currentApp: e.currentApp || 'Non renseigné'
         };
     });
 
     res.json({ statuses, tasks: db.tasks.slice(0, 20) });
 });
 
-// Admin : Créer un employé
 app.post('/api/admin/employes', (req, res) => {
-    const { name, pin, role, department, phone } = req.body;
-    if (!name || !pin) {
-        return res.status(400).json({ success: false, message: 'Nom et PIN requis' });
-    }
+    const { name, pin, role, department } = req.body;
+    if (!name || !pin) return res.status(400).json({ success: false, message: 'Nom et PIN requis' });
 
     const db = loadData();
     if (db.employees.some(e => e.name === name)) {
@@ -108,21 +115,15 @@ app.post('/api/admin/employes', (req, res) => {
     }
 
     db.employees.push({
-        name,
-        pin,
-        role: role || 'Employé',
-        department: department || 'Général',
-        phone: phone || '',
-        status: 'OFFLINE',
-        location: 'Non localisé',
-        lastTask: 'Aucun'
+        name, pin, role: role || 'Employé', department: department || 'Général',
+        status: 'OFFLINE', location: 'Non localisé', lastTask: 'Aucun',
+        startTime: '--:--', pauseTime: '--:--', endTime: '--:--', currentApp: 'Aucune'
     });
 
     saveData(db);
-    res.json({ success: true, message: 'Employé créé avec succès' });
+    res.json({ success: true, message: 'Employé créé' });
 });
 
-// Admin : Supprimer un employé
 app.delete('/api/admin/employes/:name', (req, res) => {
     const db = loadData();
     db.employees = db.employees.filter(e => e.name !== req.params.name);
@@ -131,5 +132,5 @@ app.delete('/api/admin/employes/:name', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Serveur local performant démarré sur le port ${PORT}`);
+    console.log(`Serveur démarré sur le port ${PORT}`);
 });
