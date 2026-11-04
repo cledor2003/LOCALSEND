@@ -16,7 +16,7 @@ function loadData() {
     if (!fs.existsSync(DATA_FILE)) {
         const initialData = {
             employees: [
-                { name: 'admin', pin: '0000', role: 'Administrateur', department: 'Direction', phone: '', status: 'OFFLINE', location: 'Non localisé', lastTask: 'Aucun', startTime: '--:--', pauseTime: '--:--', endTime: '--:--', currentApp: 'Aucune' }
+                { name: 'admin', pin: '0000', role: 'Administrateur', department: 'Direction', phone: '', status: 'OFFLINE', location: 'Non localisé', lastTask: 'Aucun', startTime: '--:--', pauseTime: '--:--', endTime: '--:--', currentApp: 'Aucune', avatar: '' }
             ],
             tasks: []
         };
@@ -43,7 +43,7 @@ app.post('/api/login', (req, res) => {
 
     const emp = db.employees.find(e => e.name === name && e.pin === pin);
     if (emp) {
-        return res.json({ success: true, role: 'employee', name: emp.name });
+        return res.json({ success: true, role: 'employee', name: emp.name, avatar: emp.avatar || '' });
     }
     res.status(401).json({ success: false, message: 'Identifiants invalides' });
 });
@@ -63,6 +63,19 @@ app.post('/api/pointage', (req, res) => {
         if (status === 'PAUSE') emp.pauseTime = now;
         if (status === 'OFFLINE') emp.endTime = now;
 
+        saveData(db);
+        return res.json({ success: true });
+    }
+    res.status(404).json({ success: false, message: 'Employé non trouvé' });
+});
+
+// Mise à jour de la photo de profil
+app.post('/api/employee/avatar', (req, res) => {
+    const { employe, avatar } = req.body;
+    const db = loadData();
+    const emp = db.employees.find(e => e.name === employe);
+    if (emp) {
+        emp.avatar = avatar;
         saveData(db);
         return res.json({ success: true });
     }
@@ -102,6 +115,7 @@ app.get('/api/admin/data', (req, res) => {
             role: e.role || 'Employé',
             department: e.department || 'Général',
             phone: e.phone || '',
+            avatar: e.avatar || '',
             startTime: e.startTime || '--:--',
             pauseTime: e.pauseTime || '--:--',
             endTime: e.endTime || '--:--',
@@ -113,7 +127,7 @@ app.get('/api/admin/data', (req, res) => {
 });
 
 app.post('/api/admin/employes', (req, res) => {
-    const { name, pin, role, department, phone } = req.body;
+    const { name, pin, role, department, phone, avatar } = req.body;
     if (!name || !pin) return res.status(400).json({ success: false, message: 'Nom et PIN requis' });
 
     const db = loadData();
@@ -124,6 +138,7 @@ app.post('/api/admin/employes', (req, res) => {
     db.employees.push({
         name, pin, role: role || 'Employé', department: department || 'Général',
         phone: phone || '',
+        avatar: avatar || '',
         status: 'OFFLINE', location: 'Non localisé', lastTask: 'Aucun',
         startTime: '--:--', pauseTime: '--:--', endTime: '--:--', currentApp: 'Aucune'
     });
@@ -140,5 +155,5 @@ app.delete('/api/admin/employes/:name', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Serveur AKSAM démarré sur le port \${PORT}`);
+    console.log(`Serveur AKSAM démarré sur le port ${PORT}`);
 });

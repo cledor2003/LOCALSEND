@@ -68,13 +68,16 @@
     th, td { padding: 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
     th { color: var(--text-muted); font-weight: 500; }
 
+    .user-cell { display: flex; align-items: center; gap: 12px; }
+    .avatar-img-table { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary); }
+    .avatar-placeholder-table { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #05070b; font-size: 1rem; }
+
     .btn { padding: 8px 14px; border-radius: 10px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
     .btn-primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #05070b; }
     .btn-excel { background: #107c41; color: white; }
     .btn-pdf { background: #d83b01; color: white; }
     .btn-danger { background: var(--danger); color: white; }
     .btn-call { background: rgba(52, 211, 153, 0.2); color: var(--success); border: 1px solid rgba(52, 211, 153, 0.4); }
-    .btn-call:hover { background: rgba(52, 211, 153, 0.35); }
     .btn-secondary { background: rgba(255, 255, 255, 0.1); color: white; }
     
     input, select { width: 100%; padding: 12px 18px; background: rgba(3, 7, 18, 0.9); border: 1px solid var(--border); border-radius: 12px; color: white; outline: none; margin-bottom: 15px; }
@@ -88,7 +91,6 @@
     .map-link { color: var(--primary); text-decoration: none; font-weight: 600; }
 
     .btn-logout-admin { background: rgba(248, 113, 113, 0.15); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.3); width: 100%; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; display: block; transition: 0.2s; }
-    .btn-logout-admin:hover { background: rgba(248, 113, 113, 0.25); }
 
     @media print {
       sidebar, header, .btn, .modal-overlay { display: none !important; }
@@ -101,7 +103,7 @@
 </head>
 <body>
 
-  <!-- MENU LATÉRAL GAUCHE -->
+  <!-- MENU LATÉRAL -->
   <sidebar>
     <div>
       <div class="brand-area">
@@ -137,7 +139,6 @@
       </div>
     </header>
 
-    <!-- Répertoire -->
     <div class="glass-card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
         <h3>👥 Répertoire & Contacts Directs</h3>
@@ -150,7 +151,7 @@
       <table>
         <thead>
           <tr>
-            <th>Employé / Poste</th>
+            <th>Collaborateur</th>
             <th>Département</th>
             <th>Statut</th>
             <th>App Active</th>
@@ -161,21 +162,20 @@
           </tr>
         </thead>
         <tbody id="directory-body">
-          <tr><td colspan="8" style="color:var(--text-muted);">Chargement des données...</td></tr>
+          <tr><td colspan="8" style="color:var(--text-muted);">Chargement...</td></tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Flux des Rapports -->
     <div class="glass-card">
       <h3>📊 Flux des Rapports & Captures d'Écran</h3>
       <div id="tasks-feed" style="margin-top: 15px;">
-        <p style="color: var(--text-muted);">Aucun rapport récent...</p>
+        <p style="color: var(--text-muted);">Aucun rapport...</p>
       </div>
     </div>
   </main>
 
-  <!-- MODAL : Création Employé -->
+  <!-- MODAL -->
   <div class="modal-overlay" id="employee-modal">
     <div class="modal-content">
       <h3>📝 Ajouter un Collaborateur AKSAM</h3>
@@ -202,8 +202,12 @@
           </select>
         </div>
         <div>
-          <label style="font-size: 0.85rem; color: var(--text-muted);">Numéro de Téléphone (WhatsApp / Appel)</label>
+          <label style="font-size: 0.85rem; color: var(--text-muted);">Téléphone (WhatsApp / Appel)</label>
           <input type="text" id="new-phone" placeholder="Ex: +221 77 000 00 00">
+        </div>
+        <div>
+          <label style="font-size: 0.85rem; color: var(--text-muted);">Photo de profil (Optionnelle)</label>
+          <input type="file" id="new-avatar" accept="image/*" style="padding: 10px; background: rgba(3,7,18,0.9); border: 1px solid var(--border); border-radius: 12px; color: white;">
         </div>
         <div style="display: flex; gap: 10px; margin-top: 15px;">
           <button type="submit" class="btn btn-primary" style="flex:1;">Enregistrer</button>
@@ -244,19 +248,31 @@
               gpsDisplay = `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="map-link">📍 Carte</a>`;
             }
 
-            // Bouton d'appel direct ou WhatsApp si le numéro est renseigné
-            let callButton = '<span style="color:var(--text-muted); font-size:0.8rem;">Non renseigné</span>';
+            let callButton = '<span style="color:var(--text-muted); font-size:0.8rem;">--</span>';
             if (info.phone && info.phone.trim() !== '') {
               const cleanPhone = info.phone.replace(/\s+/g, '');
               callButton = `
-                <a href="tel:${cleanPhone}" class="btn btn-call" title="Appeler directement">📞 Appeler</a>
-                <a href="https://wa.me/${cleanPhone.replace('+', '')}" target="_blank" class="btn" style="background:#25d366; color:white; margin-top:4px;" title="Envoyer un message WhatsApp">💬 WhatsApp</a>
+                <a href="tel:${cleanPhone}" class="btn btn-call" title="Appeler">📞 Appeler</a>
+                <a href="https://wa.me/${cleanPhone.replace('+', '')}" target="_blank" class="btn" style="background:#25d366; color:white; margin-top:4px;" title="WhatsApp">💬 WhatsApp</a>
               `;
+            }
+
+            let avatarHtml = `<div class="avatar-placeholder-table">${name.charAt(0).toUpperCase()}</div>`;
+            if (info.avatar) {
+              avatarHtml = `<img src="${info.avatar}" class="avatar-img-table">`;
             }
 
             tbody.innerHTML += `
               <tr>
-                <td><strong>👤 ${name}</strong><br><small style="color:var(--text-muted);">${info.role}</small></td>
+                <td>
+                  <div class="user-cell">
+                    ${avatarHtml}
+                    <div>
+                      <strong>${name}</strong><br>
+                      <small style="color:var(--text-muted);">${info.role}</small>
+                    </div>
+                  </div>
+                </td>
                 <td>🏢 ${info.department}</td>
                 <td><span class="status-pill ${pill}">${label}</span></td>
                 <td><span class="app-badge">💻 ${info.currentApp}</span></td>
@@ -316,15 +332,30 @@
       document.body.removeChild(link);
     }
 
+    const toBase64 = file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+
     document.getElementById('add-employee-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const avatarInput = document.getElementById('new-avatar');
+      let avatarBase64 = '';
+      if (avatarInput.files && avatarInput.files[0]) {
+        avatarBase64 = await toBase64(avatarInput.files[0]);
+      }
+
       const payload = {
         name: document.getElementById('new-name').value.trim(),
         pin: document.getElementById('new-pin').value.trim(),
         role: document.getElementById('new-role').value.trim() || 'Employé',
         department: document.getElementById('new-dept').value,
-        phone: document.getElementById('new-phone').value.trim()
+        phone: document.getElementById('new-phone').value.trim(),
+        avatar: avatarBase64
       };
+
       const res = await fetch('/api/admin/employes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

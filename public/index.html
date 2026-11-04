@@ -21,7 +21,6 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
     
-    /* Arrière-plan photo entreprise professionnel avec overlay sombre */
     body { 
       background: linear-gradient(var(--bg-overlay), var(--bg-overlay)), url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
       background-size: cover;
@@ -48,18 +47,18 @@
 
     .btn { width: 100%; padding: 14px; border-radius: 12px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s; font-size: 1rem; margin-bottom: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
     .btn-primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #05070b; box-shadow: 0 10px 20px rgba(56,189,248,0.2); }
-    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
     .btn-success { background: rgba(52, 211, 153, 0.15); color: var(--success); border: 1px solid rgba(52, 211, 153, 0.4); }
     .btn-warning { background: rgba(251, 191, 36, 0.15); color: var(--warning); border: 1px solid rgba(251, 191, 36, 0.4); }
     .btn-danger { background: rgba(248, 113, 113, 0.15); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.4); }
     
-    .btn-logout { background: rgba(248, 113, 113, 0.1); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.3); width: auto; padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; float: right; margin-bottom: 15px; }
-    .btn-logout:hover { background: rgba(248, 113, 113, 0.2); }
+    .btn-logout { background: rgba(248, 113, 113, 0.1); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.3); width: auto; padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; float: right; }
 
     #employee-dashboard { display: none; width: 100%; max-width: 520px; }
     .user-info { display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
     .user-details { display: flex; align-items: center; gap: 12px; text-align: left; }
-    .avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #05070b; font-size: 1.2rem; }
+    
+    .avatar-img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); }
+    .avatar-placeholder { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #05070b; font-size: 1.3rem; }
   </style>
 </head>
 <body>
@@ -101,7 +100,10 @@
     <div class="glass-card">
       <div class="user-info">
         <div class="user-details">
-          <div class="avatar" id="user-initial">C</div>
+          <div id="avatar-container" onclick="document.getElementById('avatar-input').click()" style="cursor: pointer;" title="Changer de photo de profil">
+            <div class="avatar-placeholder" id="user-initial">C</div>
+          </div>
+          <input type="file" id="avatar-input" accept="image/*" style="display: none;" onchange="uploadAvatar(this)">
           <div>
             <h2 id="welcome-name" style="font-size: 1.2rem;">Bonjour</h2>
             <p style="color: var(--success); font-size: 0.8rem;" id="current-status-text">● Hors ligne</p>
@@ -137,6 +139,7 @@
 
   <script>
     let currentEmployee = '';
+    let currentAvatar = '';
     let inactivityTimer;
     const INACTIVITY_LIMIT = 10 * 60 * 1000;
 
@@ -167,10 +170,11 @@
             window.location.href = 'admin.html';
           } else {
             currentEmployee = data.name;
+            currentAvatar = data.avatar || '';
             document.getElementById('login-view').style.display = 'none';
             document.getElementById('employee-dashboard').style.display = 'block';
             document.getElementById('welcome-name').innerText = currentEmployee;
-            document.getElementById('user-initial').innerText = currentEmployee.charAt(0).toUpperCase();
+            renderAvatar(currentAvatar, currentEmployee);
             initInactivityDetector();
           }
         } else {
@@ -182,6 +186,36 @@
         errorDiv.style.display = 'block';
       }
     });
+
+    function renderAvatar(avatarUrl, name) {
+      const container = document.getElementById('avatar-container');
+      if (avatarUrl) {
+        container.innerHTML = `<img src="${avatarUrl}" class="avatar-img" title="Cliquer pour changer la photo">`;
+      } else {
+        container.innerHTML = `<div class="avatar-placeholder" title="Cliquer pour ajouter une photo">${name.charAt(0).toUpperCase()}</div>`;
+      }
+    }
+
+    const toBase64 = file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+
+    async function uploadAvatar(input) {
+      if (input.files && input.files[0]) {
+        const base64 = await toBase64(input.files[0]);
+        currentAvatar = base64;
+        renderAvatar(base64, currentEmployee);
+        await fetch('/api/employee/avatar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ employe: currentEmployee, avatar: base64 })
+        });
+        alert("Photo de profil mise à jour !");
+      }
+    }
 
     async function updateStatus(status) {
       const appName = document.getElementById('current-app').value.trim() || 'Non spécifié';
@@ -241,13 +275,6 @@
       document.getElementById('current-status-text').innerText = "● En pause (Inactivité)";
       alert("⚠️ Basculement automatique en pause suite à 10 minutes d'inactivité.");
     }
-
-    const toBase64 = file => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-    });
 
     async function submitTask() {
       const tache = document.getElementById('task-desc').value.trim();
