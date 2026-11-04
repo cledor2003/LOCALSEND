@@ -90,8 +90,8 @@
       </div>
 
       <div class="form-group" style="text-align: left;">
-        <label>💻 Application ou Outil actif (Obligatoire pour prouver l'activité) :</label>
-        <input type="text" id="current-app" placeholder="Ex: VS Code, Excel, Navigateur..." required>
+        <label>💻 Application ou Outil actif :</label>
+        <input type="text" id="current-app" placeholder="Ex: VS Code, Excel, Chrome..." required>
       </div>
 
       <div style="display: flex; gap: 10px; margin-bottom: 20px;">
@@ -114,6 +114,8 @@
 
   <script>
     let currentEmployee = '';
+    let inactivityTimer;
+    const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutes d'inactivité max
 
     document.getElementById('role-select').addEventListener('change', function(e) {
       const nameGroup = document.getElementById('name-group');
@@ -146,6 +148,9 @@
             document.getElementById('employee-dashboard').style.display = 'block';
             document.getElementById('welcome-name').innerText = `Bonjour, ${currentEmployee}`;
             document.getElementById('user-initial').innerText = currentEmployee.charAt(0).toUpperCase();
+            
+            // Activer la surveillance d'inactivité
+            initInactivityDetector();
           }
         } else {
           errorDiv.innerText = data.message || "Identifiants incorrects";
@@ -158,11 +163,7 @@
     });
 
     async function updateStatus(status) {
-      const appName = document.getElementById('current-app').value.trim();
-      if (!appName) {
-        alert("Veuillez renseigner l'application ou l'outil que vous utilisez sur votre machine avant de changer de statut !");
-        return;
-      }
+      const appName = document.getElementById('current-app').value.trim() || 'Non spécifié';
 
       let locationStr = "Non localisé";
       if (status === 'ONLINE' && navigator.geolocation) {
@@ -187,9 +188,42 @@
         if(status === 'ONLINE') statusText.innerText = `Statut : 🟢 En service (${appName})`;
         if(status === 'PAUSE') statusText.innerText = "Statut : 🟡 En pause";
         if(status === 'OFFLINE') statusText.innerText = "Statut : 🔴 Hors ligne";
-        alert("Statut mis à jour avec succès !");
+        
+        if(status !== 'PAUSE') alert("Statut mis à jour avec succès !");
       } catch (err) {
         alert("Erreur lors de la mise à jour.");
+      }
+    }
+
+    // --- SYSTEME DE DETECTION D'INACTIVITE AUTOMATIQUE ---
+    function initInactivityDetector() {
+      const resetTimer = () => {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = setTimeout(() => {
+          // Si l'employé était en ligne et ne touche plus à rien pendant 10 minutes
+          autoSwitchToPause();
+        }, INACTIVITY_LIMIT);
+      };
+
+      window.onload = resetTimer;
+      window.onmousemove = resetTimer;
+      window.onmousedown = resetTimer;
+      window.onclick = resetTimer;
+      window.onkeypress = resetTimer;
+      window.addEventListener('scroll', resetTimer, true);
+    }
+
+    async function autoSwitchToPause() {
+      try {
+        await fetch('/api/pointage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ employe: currentEmployee, status: 'PAUSE', currentApp: 'Inactif (Absence de mouvement)' })
+        });
+        document.getElementById('current-status-text').innerText = "Statut : 🟡 En pause (Inactivité prolongée)";
+        alert("⚠️ Vous avez été basculé automatiquement en 'Pause' suite à 10 minutes d'inactivité sur la page.");
+      } catch (e) {
+        console.error("Erreur auto-pause", e);
       }
     }
 
