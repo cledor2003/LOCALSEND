@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Espace Employé - Suivi Télétravail</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 20px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    
+    header { background: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+    .user-info h1 { font-size: 1.4rem; color: var(--primary); }
+    .status-badge { padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; text-transform: uppercase; }
+    .status-offline { background: #e2e8f0; color: #475569; }
+    .status-online { background: #dcfce7; color: var(--success); }
+    .status-pause { background: #fef3c7; color: var(--warning); }
+
+    .card { background: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .card h2 { font-size: 1.1rem; margin-bottom: 15px; color: #334155; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
+
+    .grid-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px; }
+    button { border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%; }
+    .btn-start { background: var(--success); color: white; }
+    .btn-pause { background: var(--warning); color: white; }
+    .btn-stop { background: var(--danger); color: white; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    textarea { width: 100%; height: 100px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; resize: vertical; margin-bottom: 10px; }
+    .btn-submit { background: var(--primary); color: white; }
+
+    .log-list { list-style: none; }
+    .log-item { padding: 12px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; font-size: 0.9rem; }
+    .log-item:last-child { border-bottom: none; }
+    .location-info { font-size: 0.8rem; color: #64748b; margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="user-info">
+      <h1 id="employee-name">Employé : Cledor</h1>
+      <p id="clock">--:--:--</p>
+    </div>
+    <span id="status-tag" class="status-badge status-offline">Hors ligne</span>
+  </header>
+
+  <!-- Pointage Télétravail -->
+  <div class="card">
+    <h2>1. Pointage & Présence à Distance</h2>
+    <div class="grid-actions">
+      <button id="btn-start" class="btn-start" onclick="updateStatus('ONLINE')">Prise de service</button>
+      <button id="btn-pause" class="btn-pause" onclick="updateStatus('PAUSE')" disabled>Pause</button>
+      <button id="btn-stop" class="btn-stop" onclick="updateStatus('OFFLINE')" disabled>Fin de journée</button>
+    </div>
+    <div class="location-info" id="geo-status">Géolocalisation : En attente d'action...</div>
+  </div>
+
+  <!-- Rapport d'activité -->
+  <div class="card">
+    <h2>2. Rapport d'Activité / Tâches Complétées</h2>
+    <form id="task-form" onsubmit="submitTask(event)">
+      <textarea id="task-desc" placeholder="Décrivez les tâches effectuées aujourd'hui..." required></textarea>
+      <button type="submit" class="btn-submit">Envoyer le rapport au

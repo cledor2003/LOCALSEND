@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexus - Espace Télétravail</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #05070b;
+      --card-bg: rgba(13, 19, 33, 0.7);
+      --border: rgba(56, 189, 248, 0.15);
+      --primary: #38bdf8;
+      --accent: #c084fc;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
+    body { background-color: var(--bg); color: var(--text); min-height: 100vh; background-image: radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.12) 0%, transparent 45%), radial-gradient(circle at 85% 85%, rgba(192, 132, 252, 0.12) 0%, transparent 45%); padding: 20px; }
+    .container { max-width: 900px; margin: 0 auto; }
+
+    .view { display: none; }
+    .view.active { display: block; animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.98) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .glass-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 24px; padding: 30px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1); margin-bottom: 25px; }
+
+    /* Login Box */
+    .login-box { max-width: 440px; margin: 60px auto; text-align: center; }
+    .login-box h1 { font-size: 2.2rem; font-weight: 700; margin-bottom: 6px; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .login-box p { color: var(--text-muted); margin-bottom: 30px; font-size: 0.95rem; }
+
+    .input-group { margin-bottom: 20px; text-align: left; }
+    .input-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
+    input, select, textarea { width: 100%; padding: 14px 18px; background: rgba(5, 7, 11, 0.6); border: 1px solid var(--border); border-radius: 14px; color: white; font-size: 1rem; outline: none; transition: 0.3s; }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 20px rgba(56, 189, 248, 0.25); }
+
+    .btn { width: 100%; padding: 14px; border-radius: 14px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s; font-size: 1rem; }
+    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #05070b; box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4); }
+    .btn-primary:hover { opacity: 0.95; transform: translateY(-2px); box-shadow: 0 6px 25px rgba(56, 189, 248, 0.6); }
+    .btn-success { background: var(--success); color: #05070b; }
+    .btn-warning { background: var(--warning); color: #05070b; }
+    .btn-danger { background: var(--danger); color: white; }
+
+    /* Header */
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: var(--card-bg); padding: 20px 30px; border-radius: 20px; border: 1px solid var(--border); backdrop-filter: blur(20px); }
+    .user-info { display: flex; align-items: center; gap: 15px; }
+    .avatar { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #05070b; font-size: 1.3rem; box-shadow: 0 0 15px rgba(56,189,248,0.4); }
+
+    .status-pill { padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; }
+    .pill-online { background: rgba(52, 211, 153, 0.15); color: var(--success); border: 1px solid rgba(52, 211, 153, 0.4); box-shadow: 0 0 15px rgba(52,211,153,0.2); }
+    .pill-pause { background: rgba(251, 191, 36, 0.15); color: var(--warning); border: 1px solid rgba(251, 191, 36, 0.4); }
+    .pill-offline { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); border: 1px solid rgba(148, 163, 184, 0.4); }
+
+    .grid-2 { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 25px; }
+    @media(max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+    .action-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- VUE : CONNEXION SÉCURISÉE -->
+  <div id="login-view" class="view active">
+    <div class="glass-card login-box">
+      <h1>Nexus Core</h1>
+      <p>Portail Sécurisé Télétravail & Présence</p>
+      
+      <form onsubmit="handleLogin(event)">
+        <div class="input-group">
+          <label>Type de Connexion</label>
+          <select id="login-role" onchange="toggleRoleFields()">
+            <option value="employee">Employé(e)</option>
+            <option value="admin">Administrateur (Client)</option>
+          </select>
+        </div>
+
+        <div class="input-group" id="emp-name-group">
+          <label>Votre Nom (ex: Cledor)</label>
+          <input type="text" id="login-name" placeholder="Entrez votre nom...">
+        </div>
+
+        <div class="input-group">
+          <label>Code PIN / Clé d'accès</label>
+          <input type="password" id="login-pin" placeholder="••••" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Connexion au Système</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- VUE : ESPACE EMPLOYÉ -->
+  <div id="employee-view" class="view">
+    <header>
+      <div class="user-info">
+        <div class="avatar" id="emp-avatar">C</div>
+        <div>
+          <h3 id="emp-title" style="font-size: 1.2rem;">Cledor</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted);" id="emp-clock">--:--:--</p>
+        </div>
+      </div>
+      <div>
+        <span id="emp-status-pill" class="status-pill pill-offline">Hors ligne</span>
+        <button onclick="logout()" style="background:none; border:none; color:var(--danger); cursor:pointer; margin-left:18px; font-weight:600; font-size:0.9rem;">Quitter</button>
+      </div>
+    </header>
+
+    <div class="grid-2">
+      <div class="glass-card">
+        <h2>⚡ Pointage en Direct</h2>
+        <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:20px;" id="geo-text">Satellite GPS : En attente d'activation...</p>
+        <div class="action-row">
+          <button class="btn btn-success" id="btn-on" onclick="setEmployeeStatus('ONLINE')">Service</button>
+          <button class="btn btn-warning" id="btn-pause" onclick="setEmployeeStatus('PAUSE')" disabled>Pause</button>
+          <button class="btn btn-danger" id="btn-off" onclick="setEmployeeStatus('OFFLINE')" disabled>Déco</button>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <h2>📝 Rapport d'Activité</h2>
+        <form onsubmit="sendTaskReport(event)">
+          <textarea id="task-input" placeholder="Décrivez vos tâches du jour..." required style="height:120px; margin-bottom:15px; resize:none;"></textarea>
+          <button type="submit" class="btn btn-primary">Transmettre au Manager</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let currentEmployee = null;
+
+  setInterval(() => {
+    if(document.getElementById('emp-clock')) {
+      document.getElementById('emp-clock').innerText = new Date().toLocaleTimeString();
+    }
+  }, 1000);
+
+  function toggleRoleFields() {
+    const role = document.getElementById('login-role').value;
+    document.getElementById('emp-name-group').style.display = (role === 'admin') ? 'none' : 'block';
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    const role = document.getElementById('login-role').value;
+    const pin = document.getElementById('login-pin').value;
+    const name = document.getElementById('login-name').value.trim();
+
+    if (role === 'admin') {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'admin', pin })
+      });
+      const data = await res.json();
+      if(data.success) {
+        window.location.href = 'admin.html';
+      } else {
+        alert('Code PIN Admin incorrect (Utilisez 0000 par défaut)');
+      }
+    } else {
+      if(!name) return alert('Veuillez entrer votre nom.');
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'employee', name, pin })
+      });
+      const data = await res.json();
+      if(data.success) {
+        currentEmployee = data.name;
+        document.getElementById('login-view').classList.remove('active');
+        document.getElementById('employee-view').classList.add('active');
+        document.getElementById('emp-title').innerText = currentEmployee;
+        document.getElementById('emp-avatar').innerText = currentEmployee.charAt(0).toUpperCase();
+      } else {
+        alert('Identifiants incorrects ou employé non enregistré par l\'admin.');
+      }
+    }
+  }
+
+  function logout() {
+    currentEmployee = null;
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('login-view').classList.add('active');
+  }
+
+  async function setEmployeeStatus(status) {
+    let locationStr = "Non localisé";
+    if(navigator.geolocation && status === 'ONLINE') {
+      try {
+        const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
+        locationStr = `${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)}`;
+        document.getElementById('geo-text').innerText = `Position GPS : ${locationStr}`;
+      } catch {
+        locationStr = "Géolocalisation bloquée";
+      }
+    }
+
+    const pill = document.getElementById('emp-status-pill');
+    if(status === 'ONLINE') {
+      pill.className = 'status-pill pill-online'; pill.innerText = 'En service';
+      document.getElementById('btn-on').disabled = true;
+      document.getElementById('btn-pause').disabled = false;
+      document.getElementById('btn-off').disabled = false;
+    } else if(status === 'PAUSE') {
+      pill.className = 'status-pill pill-pause'; pill.innerText = 'En pause';
+      document.getElementById('btn-on').disabled = false;
+      document.getElementById('btn-pause').disabled = true;
+      document.getElementById('btn-off').disabled = false;
+    } else {
+      pill.className = 'status-pill pill-offline'; pill.innerText = 'Hors ligne';
+      document.getElementById('btn-on').disabled = false;
+      document.getElementById('btn-pause').disabled = true;
+      document.getElementById('btn-off').disabled = true;
+    }
+
+    await fetch('/api/pointage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employe: currentEmployee, status, location: locationStr })
+    });
+  }
+
+  async function sendTaskReport(e) {
+    e.preventDefault();
+    const tache = document.getElementById('task-input').value;
+    await fetch('/api/taches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employe: currentEmployee, tache })
+    });
+    alert('Rapport transmis avec succès au dashboard client !');
+    document.getElementById('task-input').value = '';
+  }
+</script>
+
+</body>
+</html>
