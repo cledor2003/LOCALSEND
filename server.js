@@ -199,7 +199,7 @@ const MONGO_URI = process.env.MONGODB_URI || "mongodb://sowcledor400_db_user:Aks
 
 mongoose.connect(MONGO_URI)
   .then(async () => {
-      console.log('✅ AKSAM est connecté à MongoDB Atlas avec succès !');
+      console.log('✅ AKSAM - Connexion active à MongoDB Atlas (Vérification de persistance)'); // <--- Modification légère ici
       await initDefaultAdmin();
       app.listen(PORT, () => {
           console.log(`🚀 Serveur AKSAM opérationnel sur le port ${PORT}`);
