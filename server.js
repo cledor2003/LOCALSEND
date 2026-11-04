@@ -1,7 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
-const mongoose = require('mongoose'); // <-- C'EST CET IMPORT QUI MANQUAIT EN HAUT
+const mongoose = require('mongoose');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,13 +9,7 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Connexion MongoDB Atlas (via la variable d'environnement sur Render)
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/teletravail_db';
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('Connecté à MongoDB avec succès'))
-  .catch(err => console.log('Erreur de connexion MongoDB:', err.message));
-
-// Schémas Mongoose
+// Schémas Mongoose stricts
 const employeeSchema = new mongoose.Schema({
     name: { type: String, unique: true, required: true },
     pin: { type: String, required: true },
@@ -53,17 +47,22 @@ app.post('/api/login', async (req, res) => {
         if (emp) return res.json({ success: true, role: 'employee', name: emp.name });
         res.status(401).json({ success: false, message: 'Identifiants invalides' });
     } catch (err) {
+        console.error("Erreur login:", err);
         res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
 });
 
-// Pointage
+// Pointage GPS et Statut
 app.post('/api/pointage', async (req, res) => {
     const { employe, status, location } = req.body;
     try {
-        await Employee.findOneAndUpdate({ name: employe }, { status, location: location || 'GPS Actif' });
+        await Employee.findOneAndUpdate(
+            { name: employe }, 
+            { status, location: location || 'GPS Actif' }
+        );
         res.json({ success: true });
     } catch (err) {
+        console.error("Erreur pointage:", err);
         res.status(500).json({ success: false });
     }
 });
@@ -76,11 +75,12 @@ app.post('/api/taches', async (req, res) => {
         await Employee.findOneAndUpdate({ name: employe }, { lastTask: tache });
         res.json({ success: true });
     } catch (err) {
+        console.error("Erreur tâches:", err);
         res.status(500).json({ success: false });
     }
 });
 
-// Admin : Données globales
+// Admin : Récupérer toutes les données en temps réel depuis MongoDB
 app.get('/api/admin/data', async (req, res) => {
     try {
         const employees = await Employee.find({});
@@ -99,11 +99,12 @@ app.get('/api/admin/data', async (req, res) => {
 
         res.json({ statuses, tasks });
     } catch (err) {
+        console.error("Erreur admin data:", err);
         res.status(500).json({ success: false });
     }
 });
 
-// Admin : Créer un employé
+// Admin : Créer un employé dans MongoDB
 app.post('/api/admin/employes', async (req, res) => {
     const { name, pin, role, department, phone } = req.body;
     if (!name || !pin) {
@@ -127,21 +128,36 @@ app.post('/api/admin/employes', async (req, res) => {
         });
         res.json({ success: true, message: 'Employé créé avec succès' });
     } catch (error) {
-        console.error("Erreur création:", error);
+        console.error("Erreur création employé:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// Admin : Supprimer un employé
+// Admin : Supprimer un employé de MongoDB
 app.delete('/api/admin/employes/:name', async (req, res) => {
     try {
         await Employee.findOneAndDelete({ name: req.params.name });
         res.json({ success: true });
     } catch (err) {
+        console.error("Erreur suppression:", err);
         res.status(500).json({ success: false });
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Serveur démarré sur le port ${PORT}`);
-});
+// Connexion MongoDB Atlas PUIS démarrage du serveur
+const MONGO_URI = process.env.MONGO_URI;
+
+if (!MONGO_URI) {
+    console.error("ERREUR FATALE: La variable d environnement MONGO_URI n est pas définie sur Render !");
+}
+
+mongoose.connect(MONGO_URI)
+  .then(() => {
+      console.log('Connecté à MongoDB Atlas avec succès');
+      app.listen(PORT, () => {
+          console.log(`Serveur démarré et opérationnel sur le port ${PORT}`);
+      });
+  })
+  .catch(err => {
+      console.error('Erreur critique de connexion MongoDB Atlas:', err.message);
+  });
