@@ -21,7 +21,7 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
     body { background-color: var(--bg); color: var(--text); min-height: 100vh; background-image: radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.12) 0%, transparent 45%), radial-gradient(circle at 85% 85%, rgba(192, 132, 252, 0.12) 0%, transparent 45%); padding: 20px; }
-    .container { max-width: 1100px; margin: 0 auto; }
+    .container { max-width: 1200px; margin: 0 auto; }
 
     .glass-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 24px; padding: 30px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5); margin-bottom: 25px; }
 
@@ -29,29 +29,38 @@
     .admin-badge { display: flex; align-items: center; gap: 15px; }
     .avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--success); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #05070b; font-size: 1.4rem; box-shadow: 0 0 15px rgba(52,211,153,0.4); }
 
-    .status-pill { padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; }
+    .status-pill { padding: 6px 14px; border-radius: 30px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
     .pill-online { background: rgba(52, 211, 153, 0.15); color: var(--success); border: 1px solid rgba(52, 211, 153, 0.4); }
     .pill-pause { background: rgba(251, 191, 36, 0.15); color: var(--warning); border: 1px solid rgba(251, 191, 36, 0.4); }
     .pill-offline { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); border: 1px solid rgba(148, 163, 184, 0.4); }
 
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { padding: 16px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
+    th, td { padding: 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
     th { color: var(--text-muted); font-weight: 500; }
 
-    .btn { padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s; font-size: 0.9rem; }
+    .btn { padding: 10px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s; font-size: 0.85rem; }
     .btn-primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #05070b; }
+    .btn-excel { background: #107c41; color: white; }
+    .btn-pdf { background: #d83b01; color: white; }
     .btn-danger { background: var(--danger); color: white; }
     .btn-secondary { background: rgba(255, 255, 255, 0.1); color: white; }
     
     input, select { width: 100%; padding: 12px 18px; background: rgba(5, 7, 11, 0.8); border: 1px solid var(--border); border-radius: 12px; color: white; outline: none; margin-bottom: 15px; }
 
-    /* Modal / Formulaire surgissant */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 1000; }
     .modal-overlay.active { display: flex; }
     .modal-content { background: var(--card-bg); border: 1px solid var(--border); border-radius: 24px; padding: 35px; width: 100%; max-width: 500px; box-shadow: 0 25px 50px rgba(0,0,0,0.7); }
-    .modal-content h3 { margin-bottom: 20px; font-size: 1.4rem; color: var(--primary); }
-    .form-group { text-align: left; }
-    .form-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px; }
+    
+    .time-badge { font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 3px; }
+    .map-link { color: var(--primary); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
+    .map-link:hover { text-decoration: underline; }
+
+    @media print {
+      body { background: white; color: black; }
+      .glass-card { border: none; box-shadow: none; background: white; color: black; }
+      .btn, header, .modal-overlay { display: none !important; }
+      table, th, td { color: black !important; border-bottom: 1px solid #ccc !important; }
+    }
   </style>
 </head>
 <body>
@@ -68,31 +77,34 @@
     <a href="index.html" style="color: var(--danger); text-decoration: none; font-weight: 600; font-size: 0.9rem;">← Déconnexion Admin</a>
   </header>
 
-  <!-- Répertoire & Actions -->
   <div class="glass-card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h2>👥 Répertoire des Employés</h2>
-      <button class="btn btn-primary" id="open-modal-btn">+ Nouvel Employé</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+      <h2>👥 Répertoire & Horaires des Employés</h2>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-excel" onclick="exportExcel()">📊 Excel (CSV)</button>
+        <button class="btn btn-pdf" onclick="window.print()">📄 Imprimer / PDF</button>
+        <button class="btn btn-primary" id="open-modal-btn">+ Nouvel Employé</button>
+      </div>
     </div>
     
-    <table>
+    <table id="employee-table">
       <thead>
         <tr>
           <th>Employé / Poste</th>
           <th>Département</th>
           <th>Statut</th>
-          <th>Position GPS</th>
+          <th>Horaires</th>
+          <th>Position GPS (Carte)</th>
           <th>Dernière Tâche</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody id="directory-body">
-        <tr><td colspan="6" style="color:var(--text-muted);">Chargement du répertoire...</td></tr>
+        <tr><td colspan="7" style="color:var(--text-muted);">Chargement du répertoire...</td></tr>
       </tbody>
     </table>
   </div>
 
-  <!-- Flux des Rapports -->
   <div class="glass-card">
     <h2>📊 Flux des Rapports de Tâches Journaliers</h2>
     <div id="tasks-feed" style="margin-top: 15px;">
@@ -101,35 +113,31 @@
   </div>
 </div>
 
-<!-- MODAL : Formulaire de création complet -->
+<!-- MODAL : Création Employé -->
 <div class="modal-overlay" id="employee-modal">
   <div class="modal-content">
     <h3>📝 Nouveau Compte Employé</h3>
     <form id="add-employee-form">
-      <div class="form-group">
-        <label>Nom complet</label>
+      <div>
+        <label style="font-size: 0.85rem; color: var(--text-muted);">Nom complet</label>
         <input type="text" id="new-name" placeholder="Ex: Cledor Sow" required>
       </div>
-      <div class="form-group">
-        <label>Code PIN secret (Connexion)</label>
+      <div>
+        <label style="font-size: 0.85rem; color: var(--text-muted);">Code PIN secret</label>
         <input type="password" id="new-pin" placeholder="Ex: 1234" required>
       </div>
-      <div class="form-group">
-        <label>Poste / Intitulé</label>
+      <div>
+        <label style="font-size: 0.85rem; color: var(--text-muted);">Poste / Intitulé</label>
         <input type="text" id="new-role" placeholder="Ex: Développeur Full-Stack">
       </div>
-      <div class="form-group">
-        <label>Département / Service</label>
+      <div>
+        <label style="font-size: 0.85rem; color: var(--text-muted);">Département</label>
         <select id="new-dept">
           <option value="Informatique / IT">Informatique / IT</option>
           <option value="Ressources Humaines">Ressources Humaines</option>
           <option value="Operations">Opérations</option>
           <option value="Commercial">Commercial</option>
         </select>
-      </div>
-      <div class="form-group">
-        <label>Numéro de Téléphone</label>
-        <input type="tel" id="new-phone" placeholder="Ex: +221 77 000 00 00">
       </div>
 
       <div style="display: flex; gap: 10px; margin-top: 10px;">
@@ -145,8 +153,8 @@
   const openBtn = document.getElementById('open-modal-btn');
   const closeBtn = document.getElementById('close-modal-btn');
   const form = document.getElementById('add-employee-form');
+  let currentData = {};
 
-  // Gestion du Modal
   openBtn.addEventListener('click', () => modal.classList.add('active'));
   closeBtn.addEventListener('click', () => modal.classList.remove('active'));
 
@@ -154,17 +162,27 @@
     try {
       const res = await fetch('/api/admin/data');
       const data = await res.json();
+      currentData = data;
       
       const tbody = document.getElementById('directory-body');
       tbody.innerHTML = '';
 
       if (!data.statuses || Object.keys(data.statuses).length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted);">Aucun employé enregistré.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-muted);">Aucun employé enregistré.</td></tr>';
       } else {
         for (const [name, info] of Object.entries(data.statuses)) {
           let pill = 'pill-offline', label = 'Hors ligne';
           if(info.status === 'ONLINE') { pill = 'pill-online'; label = 'En service'; }
           else if(info.status === 'PAUSE') { pill = 'pill-pause'; label = 'En pause'; }
+
+          // Transformation du texte GPS en lien Google Maps cliquable si les coordonnées existent
+          let gpsDisplay = info.location || 'Non localisé';
+          if (gpsDisplay.includes('Lat:')) {
+            const parts = gpsDisplay.split(',');
+            const lat = parts[0].replace('Lat:', '').trim();
+            const lng = parts[1].replace('Lng:', '').trim();
+            gpsDisplay = `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="map-link">📍 Voir sur la carte</a>`;
+          }
 
           tbody.innerHTML += `
             <tr>
@@ -174,7 +192,12 @@
               </td>
               <td>🏢 ${info.department || 'Général'}</td>
               <td><span class="status-pill ${pill}">${label}</span></td>
-              <td>📍 ${info.location || 'Non localisé'}</td>
+              <td>
+                <span class="time-badge">🟢 Début : ${info.startTime || '--:--'}</span>
+                <span class="time-badge">🟡 Pause : ${info.pauseTime || '--:--'}</span>
+                <span class="time-badge">🔴 Fin : ${info.endTime || '--:--'}</span>
+              </td>
+              <td>${gpsDisplay}</td>
               <td>💬 ${info.lastTask || 'Aucun'}</td>
               <td><button class="btn btn-danger" style="padding: 6px 12px; font-size:0.8rem;" onclick="deleteEmployee('${name}')">Supprimer</button></td>
             </tr>
@@ -201,16 +224,30 @@
     }
   }
 
-  // Soumission du formulaire complet
+  function exportExcel() {
+    if (!currentData.statuses) return alert("Aucune donnée à exporter.");
+    let csvContent = "data:text/csv;charset=utf-8,Employe;Poste;Departement;Statut;Heure Debut;Heure Pause;Heure Fin;Position GPS;Derniere Tache\n";
+    
+    for (const [name, info] of Object.entries(currentData.statuses)) {
+      csvContent += `${name};${info.role || 'Employé'};${info.department || 'Général'};${info.status};${info.startTime || ''};${info.pauseTime || ''};${info.endTime || ''};"${info.location || ''}";"${info.lastTask || ''}"\n`;
+    }
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Rapport_Teletravail_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
     const payload = {
       name: document.getElementById('new-name').value.trim(),
       pin: document.getElementById('new-pin').value.trim(),
       role: document.getElementById('new-role').value.trim() || 'Employé',
-      department: document.getElementById('new-dept').value,
-      phone: document.getElementById('new-phone').value.trim()
+      department: document.getElementById('new-dept').value
     };
 
     try {
@@ -224,18 +261,17 @@
         modal.classList.remove('active');
         form.reset();
         fetchAdminData();
-        alert(`Compte de ${payload.name} créé avec succès !`);
       } else {
-        const errorData = await res.json();
-        alert('Erreur : ' + (errorData.message || 'Impossible de créer le compte.'));
+        const err = await res.json();
+        alert('Erreur : ' + err.message);
       }
     } catch (err) {
-      alert('Erreur réseau lors de la création.');
+      alert('Erreur réseau.');
     }
   });
 
   async function deleteEmployee(name) {
-    if(confirm(`Voulez-vous supprimer définitivement les accès de ${name} ?`)) {
+    if(confirm(`Supprimer définitivement ${name} ?`)) {
       await fetch(`/api/admin/employes/${name}`, { method: 'DELETE' });
       fetchAdminData();
     }
