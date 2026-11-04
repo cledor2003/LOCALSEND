@@ -30,7 +30,6 @@
       display: flex;
     }
 
-    /* MENU LATÉRAL (SIDEBAR) */
     sidebar {
       width: 260px;
       background: var(--sidebar-bg);
@@ -54,7 +53,6 @@
     .nav-item { padding: 12px 16px; border-radius: 12px; color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 0.95rem; display: flex; align-items: center; gap: 12px; transition: 0.2s; }
     .nav-item.active, .nav-item:hover { background: rgba(56, 189, 248, 0.12); color: var(--primary); }
 
-    /* CONTENU PRINCIPAL */
     main { margin-left: 260px; padding: 30px; width: calc(100% - 260px); min-height: 100vh; }
 
     header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: var(--card-bg); padding: 20px 30px; border-radius: 20px; border: 1px solid var(--border); backdrop-filter: blur(20px); }
@@ -70,11 +68,13 @@
     th, td { padding: 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
     th { color: var(--text-muted); font-weight: 500; }
 
-    .btn { padding: 10px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s; font-size: 0.85rem; }
+    .btn { padding: 8px 14px; border-radius: 10px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
     .btn-primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #05070b; }
     .btn-excel { background: #107c41; color: white; }
     .btn-pdf { background: #d83b01; color: white; }
     .btn-danger { background: var(--danger); color: white; }
+    .btn-call { background: rgba(52, 211, 153, 0.2); color: var(--success); border: 1px solid rgba(52, 211, 153, 0.4); }
+    .btn-call:hover { background: rgba(52, 211, 153, 0.35); }
     .btn-secondary { background: rgba(255, 255, 255, 0.1); color: white; }
     
     input, select { width: 100%; padding: 12px 18px; background: rgba(3, 7, 18, 0.9); border: 1px solid var(--border); border-radius: 12px; color: white; outline: none; margin-bottom: 15px; }
@@ -132,7 +132,7 @@
         <h2 style="font-size: 1.4rem;">Supervision du Télétravail</h2>
         <p style="font-size: 0.85rem; color: var(--text-muted);">Suivi en temps réel des collaborateurs AKSAM</p>
       </div>
-      <div style="display: flex; gap: 10px;">
+      <div>
         <button class="btn btn-primary" onclick="openModal()">+ Nouvel Employé</button>
       </div>
     </header>
@@ -140,7 +140,7 @@
     <!-- Répertoire -->
     <div class="glass-card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h3>👥 Répertoire & Activité des Collaborateurs</h3>
+        <h3>👥 Répertoire & Contacts Directs</h3>
         <div style="display: flex; gap: 10px;">
           <button class="btn btn-excel" onclick="exportExcel()">📊 Excel (CSV)</button>
           <button class="btn btn-pdf" onclick="window.print()">📄 PDF</button>
@@ -156,7 +156,7 @@
             <th>App Active</th>
             <th>Horaires</th>
             <th>GPS</th>
-            <th>Dernière Tâche</th>
+            <th>Contact Direct</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -201,6 +201,10 @@
             <option value="Commercial">Commercial</option>
           </select>
         </div>
+        <div>
+          <label style="font-size: 0.85rem; color: var(--text-muted);">Numéro de Téléphone (WhatsApp / Appel)</label>
+          <input type="text" id="new-phone" placeholder="Ex: +221 77 000 00 00">
+        </div>
         <div style="display: flex; gap: 10px; margin-top: 15px;">
           <button type="submit" class="btn btn-primary" style="flex:1;">Enregistrer</button>
           <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
@@ -240,6 +244,16 @@
               gpsDisplay = `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="map-link">📍 Carte</a>`;
             }
 
+            // Bouton d'appel direct ou WhatsApp si le numéro est renseigné
+            let callButton = '<span style="color:var(--text-muted); font-size:0.8rem;">Non renseigné</span>';
+            if (info.phone && info.phone.trim() !== '') {
+              const cleanPhone = info.phone.replace(/\s+/g, '');
+              callButton = `
+                <a href="tel:${cleanPhone}" class="btn btn-call" title="Appeler directement">📞 Appeler</a>
+                <a href="https://wa.me/${cleanPhone.replace('+', '')}" target="_blank" class="btn" style="background:#25d366; color:white; margin-top:4px;" title="Envoyer un message WhatsApp">💬 WhatsApp</a>
+              `;
+            }
+
             tbody.innerHTML += `
               <tr>
                 <td><strong>👤 ${name}</strong><br><small style="color:var(--text-muted);">${info.role}</small></td>
@@ -252,8 +266,8 @@
                   <span class="time-badge">🔴 ${info.endTime}</span>
                 </td>
                 <td>${gpsDisplay}</td>
-                <td>💬 ${info.lastTask}</td>
-                <td><button class="btn btn-danger" style="padding: 6px 12px; font-size:0.8rem;" onclick="deleteEmployee('${name}')">Supprimer</button></td>
+                <td>${callButton}</td>
+                <td><button class="btn btn-danger" style="padding: 6px 12px;" onclick="deleteEmployee('${name}')">Supprimer</button></td>
               </tr>
             `;
           }
@@ -290,9 +304,9 @@
 
     function exportExcel() {
       if (!currentData.statuses) return;
-      let csvContent = "data:text/csv;charset=utf-8,Employe;Poste;Departement;Statut;App Active;Debut;Pause;Fin;GPS;Derniere Tache\n";
+      let csvContent = "data:text/csv;charset=utf-8,Employe;Poste;Departement;Telephone;Statut;App Active;Debut;Pause;Fin;GPS;Derniere Tache\n";
       for (const [name, info] of Object.entries(currentData.statuses)) {
-        csvContent += `${name};${info.role};${info.department};${info.status};${info.currentApp};${info.startTime};${info.pauseTime};${info.endTime};"${info.location}";"${info.lastTask}"\n`;
+        csvContent += `${name};${info.role};${info.department};${info.phone || ''};${info.status};${info.currentApp};${info.startTime};${info.pauseTime};${info.endTime};"${info.location}";"${info.lastTask}"\n`;
       }
       const link = document.createElement("a");
       link.setAttribute("href", encodeURI(csvContent));
@@ -308,7 +322,8 @@
         name: document.getElementById('new-name').value.trim(),
         pin: document.getElementById('new-pin').value.trim(),
         role: document.getElementById('new-role').value.trim() || 'Employé',
-        department: document.getElementById('new-dept').value
+        department: document.getElementById('new-dept').value,
+        phone: document.getElementById('new-phone').value.trim()
       };
       const res = await fetch('/api/admin/employes', {
         method: 'POST',

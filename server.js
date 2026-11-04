@@ -16,7 +16,7 @@ function loadData() {
     if (!fs.existsSync(DATA_FILE)) {
         const initialData = {
             employees: [
-                { name: 'admin', pin: '0000', role: 'Administrateur', department: 'Direction', status: 'OFFLINE', location: 'Non localisé', lastTask: 'Aucun', startTime: '--:--', pauseTime: '--:--', endTime: '--:--', currentApp: 'Aucune' }
+                { name: 'admin', pin: '0000', role: 'Administrateur', department: 'Direction', phone: '', status: 'OFFLINE', location: 'Non localisé', lastTask: 'Aucun', startTime: '--:--', pauseTime: '--:--', endTime: '--:--', currentApp: 'Aucune' }
             ],
             tasks: []
         };
@@ -101,6 +101,7 @@ app.get('/api/admin/data', (req, res) => {
             lastTask: e.lastTask || 'Aucun',
             role: e.role || 'Employé',
             department: e.department || 'Général',
+            phone: e.phone || '',
             startTime: e.startTime || '--:--',
             pauseTime: e.pauseTime || '--:--',
             endTime: e.endTime || '--:--',
@@ -112,7 +113,7 @@ app.get('/api/admin/data', (req, res) => {
 });
 
 app.post('/api/admin/employes', (req, res) => {
-    const { name, pin, role, department } = req.body;
+    const { name, pin, role, department, phone } = req.body;
     if (!name || !pin) return res.status(400).json({ success: false, message: 'Nom et PIN requis' });
 
     const db = loadData();
@@ -122,6 +123,7 @@ app.post('/api/admin/employes', (req, res) => {
 
     db.employees.push({
         name, pin, role: role || 'Employé', department: department || 'Général',
+        phone: phone || '',
         status: 'OFFLINE', location: 'Non localisé', lastTask: 'Aucun',
         startTime: '--:--', pauseTime: '--:--', endTime: '--:--', currentApp: 'Aucune'
     });
@@ -138,5 +140,5 @@ app.delete('/api/admin/employes/:name', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Serveur AKSAM démarré sur le port ${PORT}`);
+    console.log(`Serveur AKSAM démarré sur le port \${PORT}`);
 });
