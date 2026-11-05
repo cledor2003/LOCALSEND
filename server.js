@@ -194,12 +194,12 @@ app.delete('/api/admin/employes/:name', async (req, res) => {
     }
 });
 
-// --- CONNEXION MONGODB ATLAS (Format Direct Sans SRV) ---
-const MONGO_URI = process.env.MONGODB_URI || "mongodb://sowcledor400_db_user:Aksam2026DbPass@cluster0-shard-00-00.41hehnt.mongodb.net:27017,cluster0-shard-00-01.41hehnt.mongodb.net:27017,cluster0-shard-00-02.41hehnt.mongodb.net:27017/pointage?ssl=true&replicaSet=atlas-13b3x3-shard-0&authSource=admin&retryWrites=true&w=majority";
+// --- CONNEXION MONGODB ATLAS (Lien direct basé sur ton Cluster0 réel) ---
+const MONGO_URI = process.env.MONGODB_URI || "mongodb://sowcledor400_db_user:Aksam2026DbPass@ac-tbsl1rr-shard-00-00.louf7rl.mongodb.net:27017,ac-tbsl1rr-shard-00-01.louf7rl.mongodb.net:27017,ac-tbsl1rr-shard-00-02.louf7rl.mongodb.net:27017/pointage?ssl=true&replicaSet=atlas-13b3x3-shard-0&authSource=admin&retryWrites=true&w=majority";
 
 mongoose.connect(MONGO_URI)
   .then(async () => {
-      console.log('✅ AKSAM - Connexion active à MongoDB Atlas (Vérification de persistance)'); // <--- Modification légère ici
+      console.log('✅ AKSAM connecté avec succès à Cluster0 (Persistance Cloud Active)');
       await initDefaultAdmin();
       app.listen(PORT, () => {
           console.log(`🚀 Serveur AKSAM opérationnel sur le port ${PORT}`);
