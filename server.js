@@ -1,7 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
-const session = require('express-session'); // Nécessaire pour gérer la session admin
+const session = require('express-session');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -15,29 +15,39 @@ app.use(session({
     secret: 'cle_secrete_localsend_aksam',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false } // Mettre à true si HTTPS strict avec cookie sécurisé
+    cookie: { secure: false }
 }));
 
-// Servir uniquement les fichiers réellement publics (index, login, styles, etc.)
+// --- MIDDLEWARE DE PROTECTION ADMIN ---
+function verifierAdmin(req, res, next) {
+    if (req.session && req.session.isAdmin) {
+        return next();
+    }
+    return res.redirect('/index.html');
+}
+
+// Servir les fichiers publics (index, login, styles, etc.)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- MODÈLE EMPLOYÉ (Exemple basé sur ton projet) ---
+// --- ROUTE PROTÉGÉE POUR ADMIN ---
+app.get('/admin.html', verifierAdmin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'private', 'admin.html'));
+});
+
+// --- MODÈLE EMPLOYÉ ---
 const employeeSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
-    // autres champs potentiels...
 });
 const Employee = mongoose.model('Employee', employeeSchema);
 
 // --- FONCTION INITIALISATION ADMIN ---
 async function initDefaultAdmin() {
-    // Logique d'initialisation de l'admin par défaut si besoin
     console.log('✅ Vérification du compte Admin...');
 }
 
 // --- ROUTES API ---
 app.post('/api/admin/employes', async (req, res) => {
     try {
-        // Logique d'ajout d'employé
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -53,10 +63,9 @@ app.delete('/api/admin/employes/:name', async (req, res) => {
     }
 });
 
-// Route de connexion (exemple pour valider la session admin)
+// Route de connexion
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
-    // Vérifie tes identifiants admin ici
     if (username === 'admin' && password === 'aksam2026') {
         req.session.isAdmin = true;
         return res.json({ success: true, redirect: '/admin.html' });
@@ -69,16 +78,6 @@ app.get('/api/logout', (req, res) => {
     req.session.destroy(() => {
         res.redirect('/index.html');
     });
-});
-
-// --- ROUTE PROTÉGÉE POUR ADMIN ---
-// Empêche l'accès direct si la session n'est pas active
-app.get('/admin.html', (req, res) => {
-    if (req.session && req.session.isAdmin) {
-        return res.sendFile(path.join(__dirname, 'private', 'admin.html')); // Ou un dossier sécurisé
-    }
-    // Si non connecté, redirection automatique vers l'accueil/login
-    res.redirect('/index.html');
 });
 
 // --- CONNEXION MONGODB ATLAS (Lien validé) ---
