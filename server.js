@@ -50,7 +50,6 @@ const employeeSchema = new mongoose.Schema({
 });
 const Employee = mongoose.model('Employee', employeeSchema);
 
-// Modèle pour les rapports/pointages si nécessaire
 const reportSchema = new mongoose.Schema({
     name: String,
     status: String,
@@ -78,13 +77,19 @@ app.post('/api/admin/login', (req, res) => {
     return res.status(401).json({ success: false, error: 'Identifiant ou mot de passe administrateur incorrect.' });
 });
 
-// --- 2. CONNEXION EMPLOYÉ ---
+// --- 2. CONNEXION EMPLOYÉ (Avec vérification du nom et du PIN) ---
 app.post('/api/employe/login', async (req, res) => {
-    const { username } = req.body;
+    const { username, pin } = req.body;
     const nomCherche = (username || '').trim();
+    const pinSaisi = (pin || '').trim();
 
     try {
-        const employeTrouve = await Employee.findOne({ name: nomCherche });
+        const query = { name: nomCherche };
+        if (pinSaisi) {
+            query.pin = pinSaisi;
+        }
+        
+        const employeTrouve = await Employee.findOne(query);
         
         if (employeTrouve) {
             req.session.isAdmin = false;
@@ -100,7 +105,7 @@ app.post('/api/employe/login', async (req, res) => {
         console.error("Erreur login employé:", e);
     }
     
-    return res.status(401).json({ success: false, error: "Nom d'employé non reconnu dans la base de données." });
+    return res.status(401).json({ success: false, error: "Nom d'employé ou code PIN incorrect." });
 });
 
 // --- ROUTE UTILISATEUR ACTUEL ---
@@ -122,7 +127,7 @@ app.get('/api/logout', (req, res) => {
     });
 });
 
-// --- API DONNÉES GLOBALES ADMIN (Évite les erreurs 404 dans la console) ---
+// --- API DONNÉES GLOBALES ADMIN ---
 app.get('/api/admin/data', verifierAdmin, async (req, res) => {
     try {
         const employees = await Employee.find();
