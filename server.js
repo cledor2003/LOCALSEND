@@ -6,14 +6,13 @@ const session = require('express-session');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// --- CONFIGURATION ESSENTIELLE POUR RENDER (Proxy) ---
+// --- CONFIGURATION RENDER PROXY ---
 app.set('trust proxy', 1);
 
 // --- MIDDLEWARES ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configuration des sessions sécurisées pour le cloud
 app.use(session({
     secret: 'cle_secrete_localsend_aksam',
     resave: false,
@@ -21,11 +20,11 @@ app.use(session({
     cookie: { 
         secure: false, 
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 heures
+        maxAge: 24 * 60 * 60 * 1000 
     }
 }));
 
-// --- MIDDLEWARE DE PROTECTION ADMIN ---
+// --- PROTECTION ROUTE ADMIN ---
 function verifierAdmin(req, res, next) {
     if (req.session && req.session.isAdmin) {
         return next();
@@ -33,10 +32,10 @@ function verifierAdmin(req, res, next) {
     return res.redirect('/login.html');
 }
 
-// Servir les fichiers publics (index, login, styles, etc.)
+// Servir les fichiers publics
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- ROUTE PROTÉGÉE POUR ADMIN ---
+// Route administrative privée (dossier /private)
 app.get('/admin.html', verifierAdmin, (req, res) => {
     res.sendFile(path.join(__dirname, 'private', 'admin.html'));
 });
@@ -48,36 +47,34 @@ const employeeSchema = new mongoose.Schema({
 });
 const Employee = mongoose.model('Employee', employeeSchema);
 
-// --- FONCTION INITIALISATION ADMIN ---
 async function initDefaultAdmin() {
-    console.log('✅ Système AKSAM initialisé avec succès.');
+    console.log('✅ Système AKSAM initialisé.');
 }
 
-// --- ROUTE DE CONNEXION UNIFIÉE (Admin & Employés) ---
+// --- ROUTE DE CONNEXION UNIFIÉE ET CORRIGÉE ---
 app.post('/api/login', async (req, res) => {
     const { username, password, pin, code, role, type } = req.body;
     
-    const secretUtilise = (password || pin || code || '').toString().trim();
-    const roleSelectionne = (role || type || username || '').toString().toLowerCase();
+    const identifiantSaisi = (username || role || type || '').toString().trim().toLowerCase();
+    const secretSaisi = (password || pin || code || '').toString().trim();
 
-    // 1. CAS DE L'ADMINISTRATEUR
-    if (secretUtilise === 'aksam2026' || (roleSelectionne.includes('admin') && secretUtilise === 'aksam2026')) {
+    // 1. VÉRIFICATION ADMINISTRATEUR (Fonctionne depuis login.html ou index.html)
+    if (identifiantSaisi === 'admin' && secretSaisi === 'aksam2026') {
         req.session.isAdmin = true;
         req.session.userType = 'admin';
         req.session.userName = 'Administrateur';
         
         return req.session.save((err) => {
-            if (err) return res.status(500).json({ success: false, error: 'Erreur de session serveur.' });
+            if (err) return res.status(500).json({ success: false, error: 'Erreur de session.' });
             return res.json({ success: true, redirect: '/admin.html' });
         });
     }
-    
-    // 2. CAS D'UN EMPLOYÉ / COLLABORATEUR
+
+    // 2. VÉRIFICATION EMPLOYÉ / COLLABORATEUR
     try {
-        const nomCherche = (username || '').trim();
-        const employeTrouve = await Employee.findOne({ 
-            $or: [{ name: nomCherche }, { pin: secretUtilise }] 
-        });
+        const nomEmploye = (username || '').trim();
+        // Recherche l'employé dans MongoDB Atlas par son nom
+        const employeTrouve = await Employee.findOne({ name: nomEmploye });
         
         if (employeTrouve) {
             req.session.isAdmin = false;
@@ -85,19 +82,19 @@ app.post('/api/login', async (req, res) => {
             req.session.userName = employeTrouve.name;
             
             return req.session.save((err) => {
-                if (err) return res.status(500).json({ success: false, error: 'Erreur de session serveur.' });
+                if (err) return res.status(500).json({ success: false, error: 'Erreur de session.' });
                 return res.json({ success: true, redirect: '/employe.html' });
             });
         }
     } catch (e) {
-        console.error("Erreur recherche employé:", e);
+        console.error("Erreur de connexion employé:", e);
     }
-    
-    // Si aucun compte ne correspond
+
+    // Si rien ne correspond
     res.status(401).json({ success: false, error: 'Identifiant ou code PIN incorrect.' });
 });
 
-// --- ROUTE POUR RÉCUPÉRER L'UTILISATEUR CONNECTÉ (Évite le "undefined") ---
+// --- ROUTE POUR RÉCUPÉRER L'UTILISATEUR CONNECTÉ ---
 app.get('/api/current-user', (req, res) => {
     if (req.session && req.session.userName) {
         return res.json({ 
@@ -109,7 +106,7 @@ app.get('/api/current-user', (req, res) => {
     res.json({ loggedIn: false });
 });
 
-// --- ROUTE DE DÉCONNEXION ---
+// --- DÉCONNEXION ---
 app.get('/api/logout', (req, res) => {
     req.session.destroy(() => {
         res.redirect('/index.html');
