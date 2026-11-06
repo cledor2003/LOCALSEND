@@ -44,6 +44,7 @@ app.get('/admin.html', verifierAdmin, (req, res) => {
 // --- MODÈLE EMPLOYÉ ---
 const employeeSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
+    pin: { type: String, required: false } // Optionnel si tu gères des codes PIN par employé
 });
 const Employee = mongoose.model('Employee', employeeSchema);
 
@@ -52,26 +53,55 @@ async function initDefaultAdmin() {
     console.log('✅ Compte Admin par défaut initialisé dans la base de données.');
 }
 
-// --- ROUTE DE CONNEXION ADMIN (Flexible pour PIN / Password) ---
-app.post('/api/login', (req, res) => {
+// --- ROUTE DE CONNEXION UNIFIÉE (Admin & Employés) ---
+app.post('/api/login', async (req, res) => {
     const { username, password, pin, code } = req.body;
-    
-    // Récupère le secret peu importe le nom du champ envoyé par le formulaire (password, pin ou code)
     const secretUtilise = password || pin || code;
     
-    // Mot de passe / PIN administrateur accepté
-    if (secretUtilise === 'aksam2026') {
+    // 1. CAS DE L'ADMINISTRATEUR
+    if (username === 'admin' && secretUtilise === 'aksam2026') {
         req.session.isAdmin = true;
+        req.session.userType = 'admin';
+        req.session.userName = 'Administrateur';
         
         return req.session.save((err) => {
-            if (err) {
-                return res.status(500).json({ success: false, error: 'Erreur de session serveur.' });
-            }
+            if (err) return res.status(500).json({ success: false, error: 'Erreur session.' });
             return res.json({ success: true, redirect: '/admin.html' });
         });
     }
     
-    res.status(401).json({ success: false, error: 'Code PIN ou identifiant incorrect.' });
+    // 2. CAS D'UN EMPLOYÉ (Vérification par nom / identifiant)
+    try {
+        const employeTrouve = await Employee.findOne({ name: username.trim() });
+        
+        if (employeTrouve) {
+            req.session.isAdmin = false;
+            req.session.userType = 'employee';
+            req.session.userName = employeTrouve.name;
+            
+            return req.session.save((err) => {
+                if (err) return res.status(500).json({ success: false, error: 'Erreur session.' });
+                return res.json({ success: true, redirect: '/employe.html' });
+            });
+        }
+    } catch (e) {
+        console.error("Erreur recherche employé:", e);
+    }
+    
+    // Si aucun compte ne correspond
+    res.status(401).json({ success: false, error: 'Identifiant ou code PIN incorrect.' });
+});
+
+// --- ROUTE POUR RÉCUPÉRER L'UTILISATEUR CONNECTÉ ---
+app.get('/api/current-user', (req, res) => {
+    if (req.session && req.session.userName) {
+        return res.json({ 
+            loggedIn: true, 
+            name: req.session.userName, 
+            isAdmin: req.session.isAdmin || false 
+        });
+    }
+    res.json({ loggedIn: false });
 });
 
 // --- ROUTE DE DÉCONNEXION ---
@@ -84,6 +114,10 @@ app.get('/api/logout', (req, res) => {
 // --- ROUTES API DIVERSES ---
 app.post('/api/admin/employes', async (req, res) => {
     try {
+        const { name } = req.body;
+        if (name) {
+            await Employee.findOneAndUpdate({ name }, { name }, { upsert: true, new: true });
+        }
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
