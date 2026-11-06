@@ -19,7 +19,7 @@ app.use(session({
     resave: false,
     saveUninitialized: true,
     cookie: { 
-        secure: false, // Mettre à true si HTTPS strict, mais false fonctionne bien avec trust proxy sur Render
+        secure: false, 
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000 // 24 heures
     }
@@ -52,15 +52,17 @@ async function initDefaultAdmin() {
     console.log('✅ Compte Admin par défaut initialisé dans la base de données.');
 }
 
-// --- ROUTE DE CONNEXION ADMIN ---
+// --- ROUTE DE CONNEXION ADMIN (Flexible pour PIN / Password) ---
 app.post('/api/login', (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, pin, code } = req.body;
     
-    // Identifiants par défaut
-    if (username === 'admin' && password === 'aksam2026') {
+    // Récupère le secret peu importe le nom du champ envoyé par le formulaire (password, pin ou code)
+    const secretUtilise = password || pin || code;
+    
+    // Mot de passe / PIN administrateur accepté
+    if (secretUtilise === 'aksam2026') {
         req.session.isAdmin = true;
         
-        // Sauvegarde explicite de la session avant de répondre pour éviter tout décalage
         return req.session.save((err) => {
             if (err) {
                 return res.status(500).json({ success: false, error: 'Erreur de session serveur.' });
@@ -69,7 +71,7 @@ app.post('/api/login', (req, res) => {
         });
     }
     
-    res.status(401).json({ success: false, error: 'Identifiant ou mot de passe incorrect.' });
+    res.status(401).json({ success: false, error: 'Code PIN ou identifiant incorrect.' });
 });
 
 // --- ROUTE DE DÉCONNEXION ---
