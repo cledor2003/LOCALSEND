@@ -6,16 +6,23 @@ const session = require('express-session');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
+// --- CONFIGURATION ESSENTIELLE POUR RENDER (Proxy) ---
+app.set('trust proxy', 1);
+
 // --- MIDDLEWARES ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configuration des sessions pour sécuriser l'admin
+// Configuration des sessions sécurisées pour le cloud
 app.use(session({
     secret: 'cle_secrete_localsend_aksam',
     resave: false,
-    saveUninitialized: false,
-    cookie: { secure: false }
+    saveUninitialized: true,
+    cookie: { 
+        secure: false, // Mettre à true si HTTPS strict, mais false fonctionne bien avec trust proxy sur Render
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000 // 24 heures
+    }
 }));
 
 // --- MIDDLEWARE DE PROTECTION ADMIN ---
@@ -52,10 +59,16 @@ app.post('/api/login', (req, res) => {
     // Identifiants par défaut
     if (username === 'admin' && password === 'aksam2026') {
         req.session.isAdmin = true;
-        return res.json({ success: true, redirect: '/admin.html' });
+        
+        // Sauvegarde explicite de la session avant de répondre pour éviter tout décalage
+        return req.session.save((err) => {
+            if (err) {
+                return res.status(500).json({ success: false, error: 'Erreur de session serveur.' });
+            }
+            return res.json({ success: true, redirect: '/admin.html' });
+        });
     }
     
-    // Alignement du message d'erreur avec le champ 'error' attendu par le frontend
     res.status(401).json({ success: false, error: 'Identifiant ou mot de passe incorrect.' });
 });
 
