@@ -6,14 +6,13 @@ const session = require('express-session');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// --- CONFIGURATION ESSENTIELLE POUR RENDER (Proxy) ---
+// --- CONFIGURATION RENDER PROXY ---
 app.set('trust proxy', 1);
 
 // --- MIDDLEWARES ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configuration des sessions sécurisées pour le cloud
 app.use(session({
     secret: 'cle_secrete_localsend_aksam',
     resave: false,
@@ -21,45 +20,49 @@ app.use(session({
     cookie: { 
         secure: false, 
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 heures
+        maxAge: 24 * 60 * 60 * 1000
     }
 }));
 
-// --- MIDDLEWARE DE PROTECTION ADMIN ---
+// --- PROTECTION ROUTE ADMIN ---
 function verifierAdmin(req, res, next) {
     if (req.session && req.session.isAdmin) {
         return next();
     }
-    return res.redirect('/login.html');
+    return res.redirect('/index.html');
 }
 
-// Servir les fichiers publics (index, login, styles, etc.)
+// Servir les fichiers publics
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- ROUTE PROTÉGÉE POUR ADMIN ---
+// Route administrative privée
 app.get('/admin.html', verifierAdmin, (req, res) => {
     res.sendFile(path.join(__dirname, 'private', 'admin.html'));
 });
 
-// --- MODÈLE EMPLOYÉ ---
+// --- MODÈLES MONGODB ---
 const employeeSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
-    pin: { type: String, required: false } // Optionnel si tu gères des codes PIN par employé
+    pin: { type: String }
 });
 const Employee = mongoose.model('Employee', employeeSchema);
 
-// --- FONCTION INITIALISATION ADMIN ---
 async function initDefaultAdmin() {
-    console.log('✅ Compte Admin par défaut initialisé dans la base de données.');
+    console.log('✅ Initialisation du système terminée.');
 }
 
-// --- ROUTE DE CONNEXION UNIFIÉE (Admin & Employés) ---
+// --- ROUTE DE CONNEXION FLEXIBLE ---
 app.post('/api/login', async (req, res) => {
-    const { username, password, pin, code } = req.body;
-    const secretUtilise = password || pin || code;
+    const { username, password, pin, code, role, type } = req.body;
     
-    // 1. CAS DE L'ADMINISTRATEUR
-    if (username === 'admin' && secretUtilise === 'aksam2026') {
+    // Récupère la valeur saisie dans le champ secret/PIN
+    const secretUtilise = (password || pin || code || '').toString().trim();
+    // Récupère le type de rôle sélectionné dans la liste déroulante
+    const roleSelectionne = (role || type || username || '').toString().toLowerCase();
+
+    // 1. CONNEXION ADMINISTRATEUR
+    // Valide si le mot de passe est aksam2026 OU si le rôle choisi est administrateur avec aksam2026
+    if (secretUtilise === 'aksam2026' || (roleSelectionne.includes('admin') && secretUtilise === 'aksam2026')) {
         req.session.isAdmin = true;
         req.session.userType = 'admin';
         req.session.userName = 'Administrateur';
@@ -70,9 +73,12 @@ app.post('/api/login', async (req, res) => {
         });
     }
     
-    // 2. CAS D'UN EMPLOYÉ (Vérification par nom / identifiant)
+    // 2. CONNEXION EMPLOYÉ / COLLABORATEUR
     try {
-        const employeTrouve = await Employee.findOne({ name: username.trim() });
+        const nomCherche = (username || '').trim();
+        const employeTrouve = await Employee.findOne({ 
+            $or: [{ name: nomCherche }, { pin: secretUtilise }] 
+        });
         
         if (employeTrouve) {
             req.session.isAdmin = false;
@@ -85,14 +91,14 @@ app.post('/api/login', async (req, res) => {
             });
         }
     } catch (e) {
-        console.error("Erreur recherche employé:", e);
+        console.error("Erreur login employé:", e);
     }
     
-    // Si aucun compte ne correspond
+    // Si la vérification échoue
     res.status(401).json({ success: false, error: 'Identifiant ou code PIN incorrect.' });
 });
 
-// --- ROUTE POUR RÉCUPÉRER L'UTILISATEUR CONNECTÉ ---
+// --- ROUTE INFORMATIONS SESSION ---
 app.get('/api/current-user', (req, res) => {
     if (req.session && req.session.userName) {
         return res.json({ 
@@ -104,19 +110,28 @@ app.get('/api/current-user', (req, res) => {
     res.json({ loggedIn: false });
 });
 
-// --- ROUTE DE DÉCONNEXION ---
+// --- DÉCONNEXION ---
 app.get('/api/logout', (req, res) => {
     req.session.destroy(() => {
         res.redirect('/index.html');
     });
 });
 
-// --- ROUTES API DIVERSES ---
+// --- ROUTES API GESTION EMPLOYÉS ---
+app.get('/api/admin/employes', async (req, res) => {
+    try {
+        const employes = await Employee.find();
+        res.json(employes);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/admin/employes', async (req, res) => {
     try {
-        const { name } = req.body;
+        const { name, pin } = req.body;
         if (name) {
-            await Employee.findOneAndUpdate({ name }, { name }, { upsert: true, new: true });
+            await Employee.findOneAndUpdate({ name }, { name, pin }, { upsert: true, new: true });
         }
         res.json({ success: true });
     } catch (err) {
