@@ -45,7 +45,34 @@ async function initDefaultAdmin() {
     console.log('✅ Vérification du compte Admin...');
 }
 
-// --- ROUTES API ---
+// --- ROUTE DE CONNEXION ADMIN ---
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    
+    // Identifiants par défaut
+    if (username === 'admin' && password === 'aksam2026') {
+        req.session.isAdmin = true;
+        
+        // Si la requête provient d'un formulaire HTML classique (soumission directe)
+        if (req.headers['content-type'] && req.headers['content-type'].includes('application/x-www-form-urlencoded')) {
+            return res.redirect('/admin.html');
+        }
+        
+        // Si c'est un fetch/AJAX
+        return res.json({ success: true, redirect: '/admin.html' });
+    }
+    
+    res.status(401).json({ success: false, message: 'Identifiants incorrects' });
+});
+
+// --- ROUTE DE DÉCONNEXION ---
+app.get('/api/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.redirect('/index.html');
+    });
+});
+
+// --- ROUTES API DIVERSES ---
 app.post('/api/admin/employes', async (req, res) => {
     try {
         res.json({ success: true });
@@ -63,24 +90,7 @@ app.delete('/api/admin/employes/:name', async (req, res) => {
     }
 });
 
-// Route de connexion
-app.post('/api/login', (req, res) => {
-    const { username, password } = req.body;
-    if (username === 'admin' && password === 'aksam2026') {
-        req.session.isAdmin = true;
-        return res.json({ success: true, redirect: '/admin.html' });
-    }
-    res.status(401).json({ success: false, message: 'Identifiants incorrects' });
-});
-
-// Route de déconnexion
-app.get('/api/logout', (req, res) => {
-    req.session.destroy(() => {
-        res.redirect('/index.html');
-    });
-});
-
-// --- CONNEXION MONGODB ATLAS (Lien validé) ---
+// --- CONNEXION MONGODB ATLAS ---
 const MONGO_URI = process.env.MONGODB_URI || "mongodb+srv://sowcledor400_db_user:YblwacNjVehm97If@cluster0.louf7rl.mongodb.net/pointage?retryWrites=true&w=majority&appName=Cluster0";
 
 mongoose.connect(MONGO_URI)
