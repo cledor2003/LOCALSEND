@@ -1,39 +1,18 @@
-(function () {
-  const STORAGE_KEY = "aksam-theme";
+document.addEventListener('DOMContentLoaded', () => {
+  const themeToggle = document.getElementById('themeToggle');
+  if (!themeToggle) return;
 
-  function applyTheme(theme) {
-    document.documentElement.setAttribute("data-theme", theme);
-    const btn = document.getElementById("themeToggle");
-    if (btn) btn.textContent = theme === "light" ? "🌙" : "☀️";
+  const savedTheme = localStorage.getItem('ak_theme') || 'dark';
+  if (savedTheme === 'light') {
+      document.body.classList.add('light-mode');
+      themeToggle.textContent = '🌙';
   }
 
-  function getStoredTheme() {
-    try {
-      return localStorage.getItem(STORAGE_KEY);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function setStoredTheme(theme) {
-    try {
-      localStorage.setItem(STORAGE_KEY, theme);
-    } catch (e) {}
-  }
-
-  const stored = getStoredTheme();
-  const initial = stored || "dark";
-  applyTheme(initial);
-
-  document.addEventListener("DOMContentLoaded", () => {
-    const btn = document.getElementById("themeToggle");
-    if (!btn) return;
-    btn.textContent = initial === "light" ? "🌙" : "☀️";
-    btn.onclick = () => {
-      const current = document.documentElement.getAttribute("data-theme") || "dark";
-      const next = current === "dark" ? "light" : "dark";
-      applyTheme(next);
-      setStoredTheme(next);
-    };
+  themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('light-mode');
+      const isLight = document.body.classList.contains('light-mode');
+      
+      themeToggle.textContent = isLight ? '🌙' : '☀️';
+      localStorage.setItem('ak_theme', isLight ? 'light' : 'dark');
   });
-})();
+});

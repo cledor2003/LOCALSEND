@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 10000;
 
 app.set('trust proxy', 1);
 
-app.use(express.json({ limit: '10mb' })); // Limite augmentée pour accepter les images en Base64 (avatars)
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(session({

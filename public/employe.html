@@ -225,7 +225,7 @@
 
     let screenshots = [];
     if (fileInput.files && fileInput.files.length > 0) {
-      const filesToProcess = Array.from(fileInput.files).slice(0, 5); // Limite à 5 max
+      const filesToProcess = Array.from(fileInput.files).slice(0, 5);
       for (let file of filesToProcess) {
         const base64 = await toBase64(file);
         screenshots.push(base64);
