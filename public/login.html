@@ -45,28 +45,42 @@ async function attemptLogin() {
   const username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value;
   const btn = document.getElementById("loginBtn");
+  
+  if (!username || !password) {
+    showError("Veuillez saisir votre identifiant et mot de passe.");
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = "Connexion…";
+  
   try {
     const res = await fetch("/api/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
     });
-    if (res.ok) {
-      window.location.href = "/admin.html";
+    
+    const data = await res.json().catch(() => null);
+
+    if (res.ok && data && data.success) {
+      window.location.href = data.redirect || "/admin.html";
       return;
     }
-    const data = await res.json().catch(() => null);
-    showError((data && data.error) || `Connexion impossible (code ${res.status}). Réessaie dans quelques secondes.`);
+    
+    showError((data && data.error) || `Connexion impossible (code ${res.status}).`);
   } catch (e) {
     showError("Impossible de contacter le serveur.");
   }
+  
   btn.disabled = false;
   btn.textContent = "Se connecter";
 }
 
 document.getElementById("loginBtn").onclick = attemptLogin;
+document.getElementById("username").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") attemptLogin();
+});
 document.getElementById("password").addEventListener("keydown", (e) => {
   if (e.key === "Enter") attemptLogin();
 });

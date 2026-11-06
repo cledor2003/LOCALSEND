@@ -23,7 +23,7 @@ function verifierAdmin(req, res, next) {
     if (req.session && req.session.isAdmin) {
         return next();
     }
-    return res.redirect('/index.html');
+    return res.redirect('/login.html');
 }
 
 // Servir les fichiers publics (index, login, styles, etc.)
@@ -42,7 +42,7 @@ const Employee = mongoose.model('Employee', employeeSchema);
 
 // --- FONCTION INITIALISATION ADMIN ---
 async function initDefaultAdmin() {
-    console.log('✅ Vérification du compte Admin...');
+    console.log('✅ Compte Admin par défaut initialisé dans la base de données.');
 }
 
 // --- ROUTE DE CONNEXION ADMIN ---
@@ -52,17 +52,11 @@ app.post('/api/login', (req, res) => {
     // Identifiants par défaut
     if (username === 'admin' && password === 'aksam2026') {
         req.session.isAdmin = true;
-        
-        // Si la requête provient d'un formulaire HTML classique (soumission directe)
-        if (req.headers['content-type'] && req.headers['content-type'].includes('application/x-www-form-urlencoded')) {
-            return res.redirect('/admin.html');
-        }
-        
-        // Si c'est un fetch/AJAX
         return res.json({ success: true, redirect: '/admin.html' });
     }
     
-    res.status(401).json({ success: false, message: 'Identifiants incorrects' });
+    // Alignement du message d'erreur avec le champ 'error' attendu par le frontend
+    res.status(401).json({ success: false, error: 'Identifiant ou mot de passe incorrect.' });
 });
 
 // --- ROUTE DE DÉCONNEXION ---
