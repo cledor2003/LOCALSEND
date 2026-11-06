@@ -36,19 +36,29 @@ function verifierAdmin(req, res, next) {
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Route administrative protégée (HTML)
-app.get('/admin.html', (req, res, next) => {
+app.get('/admin.html', (req, res) => {
     if (req.session && req.session.isAdmin) {
         return res.sendFile(path.join(__dirname, 'private', 'admin.html'));
     }
     return res.redirect('/login.html');
 });
 
-// --- MODÈLE EMPLOYÉ ---
+// --- MODÈLES MONGODB ---
 const employeeSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
     pin: { type: String }
 });
 const Employee = mongoose.model('Employee', employeeSchema);
+
+// Modèle pour les rapports/pointages si nécessaire
+const reportSchema = new mongoose.Schema({
+    name: String,
+    status: String,
+    appActive: String,
+    task: String,
+    date: { type: Date, default: Date.now }
+});
+const Report = mongoose.model('Report', reportSchema);
 
 // --- 1. CONNEXION ADMIN ---
 app.post('/api/admin/login', (req, res) => {
@@ -110,6 +120,17 @@ app.get('/api/logout', (req, res) => {
     req.session.destroy(() => {
         res.redirect('/index.html');
     });
+});
+
+// --- API DONNÉES GLOBALES ADMIN (Évite les erreurs 404 dans la console) ---
+app.get('/api/admin/data', verifierAdmin, async (req, res) => {
+    try {
+        const employees = await Employee.find();
+        const reports = await Report.find().sort({ date: -1 }).limit(50);
+        res.json({ success: true, employees, reports });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 // --- GESTION DES EMPLOYÉS (Sécurisé Admin) ---
