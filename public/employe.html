@@ -3,37 +3,111 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Espace Employé - Suivi Télétravail</title>
+  <title>AKSAM — Espace Collaborateur</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #2563eb;
-      --success: #16a34a;
-      --warning: #d97706;
-      --danger: #dc2626;
-      --bg: #f8fafc;
-      --card: #ffffff;
-      --text: #1e293b;
+      --bg-overlay: rgba(3, 7, 18, 0.90);
+      --card-bg: rgba(15, 23, 42, 0.80);
+      --border: rgba(56, 189, 248, 0.15);
+      --primary: #38bdf8;
+      --accent: #818cf8;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); padding: 20px; }
-    .container { max-width: 800px; margin: 0 auto; }
-    header { background: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-    .user-info h1 { font-size: 1.4rem; color: var(--primary); }
-    .status-badge { padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; text-transform: uppercase; }
-    .status-offline { background: #e2e8f0; color: #475569; }
-    .status-online { background: #dcfce7; color: var(--success); }
-    .status-pause { background: #fef3c7; color: var(--warning); }
-    .card { background: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    .card h2 { font-size: 1.1rem; margin-bottom: 15px; color: #334155; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
-    .grid-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px; }
-    button { border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%; }
-    .btn-start { background: var(--success); color: white; }
-    .btn-pause { background: var(--warning); color: white; }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
+    
+    body { 
+      background: linear-gradient(var(--bg-overlay), var(--bg-overlay)), url('https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+      background-size: cover;
+      color: var(--text); 
+      min-height: 100vh; 
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container { 
+      width: 100%; 
+      max-width: 650px; 
+    }
+
+    header { 
+      background: var(--card-bg); 
+      backdrop-filter: blur(20px);
+      padding: 24px 30px; 
+      border-radius: 20px; 
+      border: 1px solid var(--border); 
+      margin-bottom: 20px; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .user-info h1 { font-size: 1.3rem; color: var(--primary); font-weight: 600; }
+    .user-info p { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+
+    .status-badge { padding: 6px 14px; border-radius: 30px; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .status-offline { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); border: 1px solid rgba(148, 163, 184, 0.4); }
+    .status-online { background: rgba(52, 211, 153, 0.15); color: var(--success); border: 1px solid rgba(52, 211, 153, 0.4); }
+    .status-pause { background: rgba(251, 191, 36, 0.15); color: var(--warning); border: 1px solid rgba(251, 191, 36, 0.4); }
+
+    .card { 
+      background: var(--card-bg); 
+      backdrop-filter: blur(20px);
+      padding: 25px; 
+      border-radius: 20px; 
+      border: 1px solid var(--border); 
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5); 
+      margin-bottom: 20px; 
+    }
+
+    .card h2 { font-size: 1.05rem; margin-bottom: 18px; color: var(--text); font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+
+    .grid-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 15px; }
+    
+    button { border: none; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%; font-size: 0.9rem; }
+    
+    .btn-start { background: var(--success); color: #05070b; }
+    .btn-pause { background: var(--warning); color: #05070b; }
     .btn-stop { background: var(--danger); color: white; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    input, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; resize: vertical; margin-bottom: 10px; outline: none; }
-    .btn-submit { background: var(--primary); color: white; }
-    .location-info { font-size: 0.8rem; color: #64748b; margin-top: 4px; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    input, textarea { 
+      width: 100%; 
+      padding: 14px 18px; 
+      background: rgba(3, 7, 18, 0.8); 
+      border: 1px solid var(--border); 
+      border-radius: 12px; 
+      color: white; 
+      font-size: 0.95rem; 
+      outline: none; 
+      margin-bottom: 15px; 
+      transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus { border-color: var(--primary); }
+    textarea { height: 110px; resize: vertical; }
+
+    .btn-submit { 
+      background: linear-gradient(135deg, var(--primary), var(--accent)); 
+      color: #05070b; 
+      font-weight: 700; 
+      padding: 14px;
+      border-radius: 12px;
+    }
+    .btn-submit:hover { opacity: 0.9; }
+
+    .location-info { font-size: 0.8rem; color: var(--text-muted); margin-top: 8px; }
+    
+    .logout-area { text-align: center; margin-top: 15px; }
+    .logout-link { color: var(--danger); text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: 0.2s; }
+    .logout-link:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -47,6 +121,7 @@
     <span id="status-tag" class="status-badge status-offline">Hors ligne</span>
   </header>
 
+  <!-- Pointage Télétravail -->
   <div class="card">
     <h2>1. Pointage & Présence à Distance</h2>
     <div class="grid-actions">
@@ -54,9 +129,10 @@
       <button id="btn-pause" class="btn-pause" onclick="updateStatus('PAUSE')" disabled>Pause</button>
       <button id="btn-stop" class="btn-stop" onclick="updateStatus('OFFLINE')" disabled>Fin de journée</button>
     </div>
-    <div class="location-info" id="geo-status">Géolocalisation : En attente d'action...</div>
+    <div class="location-info" id="geo-status">📍 Géolocalisation : En attente d'action...</div>
   </div>
 
+  <!-- Rapport d'activité -->
   <div class="card">
     <h2>2. Rapport d'Activité / Tâches Complétées</h2>
     <form id="task-form" onsubmit="submitTask(event)">
@@ -66,8 +142,8 @@
     </form>
   </div>
   
-  <div style="text-align: center; margin-top: 20px;">
-    <a href="/api/logout" style="color: var(--danger); text-decoration: none; font-weight: bold;">⏻ Se déconnecter</a>
+  <div class="logout-area">
+    <a href="/api/logout" class="logout-link">⏻ Se déconnecter de la session</a>
   </div>
 </div>
 
@@ -81,7 +157,7 @@
       const res = await fetch('/api/current-user');
       const data = await res.json();
       if (data.loggedIn) {
-        document.getElementById('employee-name').textContent = `Employé : ${data.name}`;
+        document.getElementById('employee-name').textContent = `Collaborateur : ${data.name}`;
       } else {
         window.location.href = '/index.html';
       }
@@ -92,14 +168,14 @@
   let userLocation = "Non localisé";
   navigator.geolocation.getCurrentPosition(pos => {
     userLocation = `Lat: ${pos.coords.latitude.toFixed(4)}, Lng: ${pos.coords.longitude.toFixed(4)}`;
-    document.getElementById('geo-status').textContent = `Géolocalisation active : ${userLocation}`;
+    document.getElementById('geo-status').textContent = `📍 Géolocalisation active : ${userLocation}`;
   }, () => {
-    document.getElementById('geo-status').textContent = `Géolocalisation refusée ou indisponible`;
+    document.getElementById('geo-status').textContent = `⚠️ Géolocalisation refusée ou indisponible`;
   });
 
   async function updateStatus(status) {
     const time = new Date().toLocaleTimeString();
-    const currentApp = document.getElementById('app-active') ? document.getElementById('app-active').value : 'Général';
+    const currentApp = document.getElementById('app-active').value || 'Général';
     
     const res = await fetch('/api/employe/status', {
       method: 'POST',
