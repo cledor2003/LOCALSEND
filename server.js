@@ -6,36 +6,25 @@ const session = require('express-session');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// --- CONFIGURATION RENDER PROXY ---
 app.set('trust proxy', 1);
 
-// --- MIDDLEWARES ---
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' })); // Limite augmentée pour accepter les images en Base64 (avatars)
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(session({
     secret: 'cle_secrete_localsend_aksam',
     resave: false,
     saveUninitialized: true,
-    cookie: { 
-        secure: false, 
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 
-    }
+    cookie: { secure: false, httpOnly: true, maxAge: 24 * 60 * 60 * 1000 }
 }));
 
-// --- MIDDLEWARE DE PROTECTION ADMIN ---
 function verifierAdmin(req, res, next) {
-    if (req.session && req.session.isAdmin) {
-        return next();
-    }
+    if (req.session && req.session.isAdmin) return next();
     return res.status(401).json({ success: false, error: 'Accès non autorisé.' });
 }
 
-// Servir les fichiers publics
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Route administrative protégée (HTML)
 app.get('/admin.html', (req, res) => {
     if (req.session && req.session.isAdmin) {
         return res.sendFile(path.join(__dirname, 'private', 'admin.html'));
@@ -46,117 +35,107 @@ app.get('/admin.html', (req, res) => {
 // --- MODÈLES MONGODB ---
 const employeeSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
-    pin: { type: String }
+    pin: { type: String },
+    role: { type: String, default: 'Employé' },
+    department: { type: String, default: 'Informatique / IT' },
+    phone: { type: String },
+    avatar: { type: String },
+    status: { type: String, default: 'OFFLINE' },
+    currentApp: { type: String, default: 'Aucune' },
+    location: { type: String, default: 'Non localisé' },
+    startTime: { type: String, default: '--:--' },
+    pauseTime: { type: String, default: '--:--' },
+    endTime: { type: String, default: '--:--' },
+    lastTask: { type: String, default: '' }
 });
 const Employee = mongoose.model('Employee', employeeSchema);
 
 const reportSchema = new mongoose.Schema({
-    name: String,
-    status: String,
-    appActive: String,
-    task: String,
+    employe: String,
+    currentApp: String,
+    tache: String,
+    screenshots: [String],
     date: { type: Date, default: Date.now }
 });
 const Report = mongoose.model('Report', reportSchema);
 
-// --- 1. CONNEXION ADMIN ---
+// --- ROUTES AUTH ---
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
-    
     if (username === 'admin' && password === 'aksam2026') {
         req.session.isAdmin = true;
-        req.session.userType = 'admin';
         req.session.userName = 'Administrateur';
-        
-        return req.session.save((err) => {
-            if (err) return res.status(500).json({ success: false, error: 'Erreur session.' });
-            return res.json({ success: true, redirect: '/admin.html' });
-        });
+        return req.session.save(() => res.json({ success: true, redirect: '/admin.html' }));
     }
-    
-    return res.status(401).json({ success: false, error: 'Identifiant ou mot de passe administrateur incorrect.' });
+    return res.status(401).json({ success: false, error: 'Identifiants incorrects.' });
 });
 
-// --- 2. CONNEXION EMPLOYÉ (Avec vérification du nom et du PIN) ---
 app.post('/api/employe/login', async (req, res) => {
     const { username, pin } = req.body;
-    const nomCherche = (username || '').trim();
-    const pinSaisi = (pin || '').trim();
-
     try {
-        const query = { name: nomCherche };
-        if (pinSaisi) {
-            query.pin = pinSaisi;
-        }
+        const query = { name: (username || '').trim() };
+        if (pin) query.pin = pin.trim();
         
-        const employeTrouve = await Employee.findOne(query);
-        
-        if (employeTrouve) {
+        const employe = await Employee.findOne(query);
+        if (employe) {
             req.session.isAdmin = false;
-            req.session.userType = 'employee';
-            req.session.userName = employeTrouve.name;
-            
-            return req.session.save((err) => {
-                if (err) return res.status(500).json({ success: false, error: 'Erreur session.' });
-                return res.json({ success: true, redirect: '/employe.html' });
-            });
+            req.session.userName = employe.name;
+            return req.session.save(() => res.json({ success: true, redirect: '/employe.html' }));
         }
     } catch (e) {
-        console.error("Erreur login employé:", e);
+        console.error(e);
     }
-    
-    return res.status(401).json({ success: false, error: "Nom d'employé ou code PIN incorrect." });
+    return res.status(401).json({ success: false, error: 'Nom ou code PIN incorrect.' });
 });
 
-// --- ROUTE UTILISATEUR ACTUEL ---
 app.get('/api/current-user', (req, res) => {
     if (req.session && req.session.userName) {
-        return res.json({ 
-            loggedIn: true, 
-            name: req.session.userName, 
-            isAdmin: req.session.isAdmin || false 
-        });
+        return res.json({ loggedIn: true, name: req.session.userName, isAdmin: req.session.isAdmin || false });
     }
     res.json({ loggedIn: false });
 });
 
-// --- DÉCONNEXION ---
 app.get('/api/logout', (req, res) => {
-    req.session.destroy(() => {
-        res.redirect('/index.html');
-    });
+    req.session.destroy(() => res.redirect('/index.html'));
 });
 
-// --- API DONNÉES GLOBALES ADMIN ---
+// --- API ADMIN & DATA ---
 app.get('/api/admin/data', verifierAdmin, async (req, res) => {
     try {
         const employees = await Employee.find();
         const reports = await Report.find().sort({ date: -1 }).limit(50);
-        res.json({ success: true, employees, reports });
+        
+        const statuses = {};
+        employees.forEach(emp => {
+            statuses[emp.name] = {
+                role: emp.role,
+                department: emp.department,
+                phone: emp.phone,
+                avatar: emp.avatar,
+                status: emp.status,
+                currentApp: emp.currentApp,
+                location: emp.location,
+                startTime: emp.startTime,
+                pauseTime: emp.pauseTime,
+                endTime: emp.endTime,
+                lastTask: emp.lastTask
+            };
+        });
+
+        res.json({ success: true, statuses, tasks: reports });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
 });
 
-// --- GESTION DES EMPLOYÉS (Sécurisé Admin) ---
-app.get('/api/admin/employes', verifierAdmin, async (req, res) => {
-    try {
-        const employes = await Employee.find();
-        res.json(employes);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
 app.post('/api/admin/employes', verifierAdmin, async (req, res) => {
     try {
-        const { name, pin } = req.body;
-        if (!name) {
-            return res.status(400).json({ success: false, error: "Le nom est requis." });
-        }
+        const { name, pin, role, department, phone, avatar } = req.body;
+        if (!name) return res.status(400).json({ success: false, error: "Le nom est requis." });
+        
         await Employee.findOneAndUpdate(
             { name: name.trim() }, 
-            { name: name.trim(), pin: pin ? pin.trim() : '' }, 
+            { name: name.trim(), pin, role, department, phone, avatar }, 
             { upsert: true, new: true }
         );
         res.json({ success: true });
@@ -174,16 +153,45 @@ app.delete('/api/admin/employes/:name', verifierAdmin, async (req, res) => {
     }
 });
 
-// --- CONNEXION MONGODB ATLAS ---
+// --- API EMPLOYÉ (Pointage & Rapports) ---
+app.post('/api/employe/status', async (req, res) => {
+    if (!req.session || !req.session.userName) return res.status(401).json({ error: 'Non connecté' });
+    try {
+        const { status, currentApp, location, time } = req.body;
+        const updateData = { status, currentApp, location };
+        if (status === 'ONLINE') updateData.startTime = time;
+        if (status === 'PAUSE') updateData.pauseTime = time;
+        if (status === 'OFFLINE') updateData.endTime = time;
+
+        await Employee.findOneAndUpdate({ name: req.session.userName }, updateData);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/employe/report', async (req, res) => {
+    if (!req.session || !req.session.userName) return res.status(401).json({ error: 'Non connecté' });
+    try {
+        const { currentApp, tache, screenshots } = req.body;
+        await Report.create({
+            employe: req.session.userName,
+            currentApp: currentApp || 'Général',
+            tache,
+            screenshots: screenshots || []
+        });
+        await Employee.findOneAndUpdate({ name: req.session.userName }, { lastTask: tache });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 const MONGO_URI = process.env.MONGODB_URI || "mongodb+srv://sowcledor400_db_user:YblwacNjVehm97If@cluster0.louf7rl.mongodb.net/pointage?retryWrites=true&w=majority&appName=Cluster0";
 
 mongoose.connect(MONGO_URI)
-.then(async () => {
-    console.log('✅ AKSAM connecté avec succès à Cluster0 (Persistance Cloud Active)');
-    app.listen(PORT, () => {
-        console.log(`🚀 Serveur AKSAM opérationnel sur le port ${PORT}`);
-    });
+.then(() => {
+    console.log('✅ Connecté à MongoDB Atlas');
+    app.listen(PORT, () => console.log(`🚀 Serveur actif sur le port ${PORT}`));
 })
-.catch(err => {
-    console.error('❌ Erreur de connexion MongoDB Atlas:', err.message);
-});
+.catch(err => console.error('❌ Erreur MongoDB:', err.message));
