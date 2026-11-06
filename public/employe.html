@@ -79,7 +79,7 @@
     .btn-stop { background: var(--danger); color: white; }
     button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    input, textarea { 
+    input, textarea, select { 
       width: 100%; 
       padding: 14px 18px; 
       background: rgba(3, 7, 18, 0.8); 
@@ -93,6 +93,16 @@
     }
     input:focus, textarea:focus { border-color: var(--primary); }
     textarea { height: 110px; resize: vertical; }
+
+    .file-upload-box {
+      margin-bottom: 15px;
+    }
+    .file-upload-box label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
 
     .btn-submit { 
       background: linear-gradient(135deg, var(--primary), var(--accent)); 
@@ -138,6 +148,12 @@
     <form id="task-form" onsubmit="submitTask(event)">
       <input type="text" id="app-active" placeholder="Application ou Outil actif (Ex: VS Code, Excel...)" required>
       <textarea id="task-desc" placeholder="Décrivez les tâches effectuées aujourd'hui..." required></textarea>
+      
+      <div class="file-upload-box">
+        <label>📸 Captures d'écran justificatives (5 Max) :</label>
+        <input type="file" id="screenshots-input" accept="image/*" multiple style="padding: 10px; background: rgba(3,7,18,0.8); border: 1px solid var(--border); border-radius: 12px; color: white;">
+      </div>
+
       <button type="submit" class="btn-submit">Envoyer le rapport quotidien</button>
     </form>
   </div>
@@ -194,20 +210,38 @@
     }
   }
 
+  const toBase64 = file => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+
   async function submitTask(e) {
     e.preventDefault();
     const currentApp = document.getElementById('app-active').value;
     const tache = document.getElementById('task-desc').value;
+    const fileInput = document.getElementById('screenshots-input');
+
+    let screenshots = [];
+    if (fileInput.files && fileInput.files.length > 0) {
+      const filesToProcess = Array.from(fileInput.files).slice(0, 5); // Limite à 5 max
+      for (let file of filesToProcess) {
+        const base64 = await toBase64(file);
+        screenshots.push(base64);
+      }
+    }
 
     const res = await fetch('/api/employe/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ currentApp, tache })
+      body: JSON.stringify({ currentApp, tache, screenshots })
     });
 
     if (res.ok) {
-      alert('Rapport envoyé avec succès !');
+      alert('Rapport et captures envoyés avec succès !');
       document.getElementById('task-desc').value = '';
+      fileInput.value = '';
     } else {
       alert('Erreur lors de l\'envoi du rapport.');
     }
