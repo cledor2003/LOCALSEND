@@ -24,7 +24,7 @@ app.use(session({
     }
 }));
 
-// --- PROTECTION ROUTE ADMIN ---
+// --- MIDDLEWARE DE PROTECTION ADMIN ---
 function verifierAdmin(req, res, next) {
     if (req.session && req.session.isAdmin) {
         return next();
@@ -32,10 +32,10 @@ function verifierAdmin(req, res, next) {
     return res.redirect('/login.html');
 }
 
-// Servir les fichiers publics
+// Servir les fichiers publics (public/)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Route administrative privée (dossier /private)
+// Route administrative protégée (private/admin.html)
 app.get('/admin.html', verifierAdmin, (req, res) => {
     res.sendFile(path.join(__dirname, 'private', 'admin.html'));
 });
@@ -47,34 +47,33 @@ const employeeSchema = new mongoose.Schema({
 });
 const Employee = mongoose.model('Employee', employeeSchema);
 
-async function initDefaultAdmin() {
-    console.log('✅ Système AKSAM initialisé.');
-}
-
-// --- ROUTE DE CONNEXION UNIFIÉE ET CORRIGÉE ---
-app.post('/api/login', async (req, res) => {
-    const { username, password, pin, code, role, type } = req.body;
+// --- 1. ROUTE DE CONNEXION ADMIN (login.html) ---
+app.post('/api/admin/login', (req, res) => {
+    const { username, password } = req.body;
     
-    const identifiantSaisi = (username || role || type || '').toString().trim().toLowerCase();
-    const secretSaisi = (password || pin || code || '').toString().trim();
-
-    // 1. VÉRIFICATION ADMINISTRATEUR (Fonctionne depuis login.html ou index.html)
-    if (identifiantSaisi === 'admin' && secretSaisi === 'aksam2026') {
+    if (username === 'admin' && password === 'aksam2026') {
         req.session.isAdmin = true;
         req.session.userType = 'admin';
         req.session.userName = 'Administrateur';
         
         return req.session.save((err) => {
-            if (err) return res.status(500).json({ success: false, error: 'Erreur de session.' });
+            if (err) return res.status(500).json({ success: false, error: 'Erreur session.' });
             return res.json({ success: true, redirect: '/admin.html' });
         });
     }
+    
+    return res.status(401).json({ success: false, error: 'Identifiant ou mot de passe administrateur incorrect.' });
+});
 
-    // 2. VÉRIFICATION EMPLOYÉ / COLLABORATEUR
+// --- 2. ROUTE DE CONNEXION EMPLOYÉ (index.html) ---
+app.post('/api/employe/login', async (req, res) => {
+    const { username, pin } = req.body;
+    const nomCherche = (username || '').trim();
+
     try {
-        const nomEmploye = (username || '').trim();
-        // Recherche l'employé dans MongoDB Atlas par son nom
-        const employeTrouve = await Employee.findOne({ name: nomEmploye });
+        const employeTrouve = await Employee.findOne({ 
+            $or: [{ name: nomCherche }, { pin: pin }] 
+        });
         
         if (employeTrouve) {
             req.session.isAdmin = false;
@@ -82,16 +81,15 @@ app.post('/api/login', async (req, res) => {
             req.session.userName = employeTrouve.name;
             
             return req.session.save((err) => {
-                if (err) return res.status(500).json({ success: false, error: 'Erreur de session.' });
+                if (err) return res.status(500).json({ success: false, error: 'Erreur session.' });
                 return res.json({ success: true, redirect: '/employe.html' });
             });
         }
     } catch (e) {
-        console.error("Erreur de connexion employé:", e);
+        console.error("Erreur login employé:", e);
     }
-
-    // Si rien ne correspond
-    res.status(401).json({ success: false, error: 'Identifiant ou code PIN incorrect.' });
+    
+    return res.status(401).json({ success: false, error: 'Nom d\'employé non reconnu.' });
 });
 
 // --- ROUTE POUR RÉCUPÉRER L'UTILISATEUR CONNECTÉ ---
@@ -113,7 +111,7 @@ app.get('/api/logout', (req, res) => {
     });
 });
 
-// --- ROUTES API GESTION EMPLOYÉS ---
+// --- GESTION EMPLOYÉS PAR ADMIN ---
 app.get('/api/admin/employes', async (req, res) => {
     try {
         const employes = await Employee.find();
@@ -150,7 +148,6 @@ const MONGO_URI = process.env.MONGODB_URI || "mongodb+srv://sowcledor400_db_user
 mongoose.connect(MONGO_URI)
 .then(async () => {
     console.log('✅ AKSAM connecté avec succès à Cluster0 (Persistance Cloud Active)');
-    await initDefaultAdmin();
     app.listen(PORT, () => {
         console.log(`🚀 Serveur AKSAM opérationnel sur le port ${PORT}`);
     });
