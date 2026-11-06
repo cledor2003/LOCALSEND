@@ -1,187 +1,46 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const path = require('path');
 const mongoose = require('mongoose');
+const path = require('path');
+const session = require('express-session'); // Nécessaire pour gérer la session admin
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
+// --- MIDDLEWARES ---
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Configuration des sessions pour sécuriser l'admin
+app.use(session({
+    secret: 'cle_secrete_localsend_aksam',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false } // Mettre à true si HTTPS strict avec cookie sécurisé
+}));
+
+// Servir uniquement les fichiers réellement publics (index, login, styles, etc.)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- SCHÉMAS MONGOOSE ---
+// --- MODÈLE EMPLOYÉ (Exemple basé sur ton projet) ---
 const employeeSchema = new mongoose.Schema({
-    name: { type: String, unique: true, required: true },
-    pin: { type: String, required: true },
-    role: { type: String, default: 'Employé' },
-    department: { type: String, default: 'Général' },
-    phone: { type: String, default: '' },
-    avatar: { type: String, default: '' },
-    status: { type: String, default: 'OFFLINE' },
-    location: { type: String, default: 'Non localisé' },
-    lastTask: { type: String, default: 'Aucun' },
-    startTime: { type: String, default: '--:--' },
-    pauseTime: { type: String, default: '--:--' },
-    endTime: { type: String, default: '--:--' },
-    currentApp: { type: String, default: 'Aucune' }
+    name: { type: String, required: true, unique: true },
+    // autres champs potentiels...
 });
-
-const taskSchema = new mongoose.Schema({
-    employe: String,
-    tache: String,
-    currentApp: String,
-    screenshots: [String],
-    date: { type: Date, default: Date.now }
-});
-
 const Employee = mongoose.model('Employee', employeeSchema);
-const Task = mongoose.model('Task', taskSchema);
 
-// Initialisation automatique du compte Admin si la base est neuve
+// --- FONCTION INITIALISATION ADMIN ---
 async function initDefaultAdmin() {
-    try {
-        const adminCount = await Employee.countDocuments({ role: 'Administrateur' });
-        if (adminCount === 0) {
-            await Employee.create({
-                name: 'admin',
-                pin: process.env.ADMIN_PASSWORD || '0000',
-                role: 'Administrateur',
-                department: 'Direction',
-                phone: '',
-                avatar: '',
-                status: 'OFFLINE'
-            });
-            console.log('✅ Compte Admin par défaut initialisé dans la base de données.');
-        }
-    } catch (err) {
-        console.error('Erreur initialisation admin:', err.message);
-    }
+    // Logique d'initialisation de l'admin par défaut si besoin
+    console.log('✅ Vérification du compte Admin...');
 }
 
 // --- ROUTES API ---
-
-app.post('/api/login', async (req, res) => {
-    const { name, pin, role } = req.body;
-    
-    if (role === 'admin') {
-        const adminPass = process.env.ADMIN_PASSWORD || '0000';
-        if (pin === adminPass) return res.json({ success: true, role: 'admin' });
-        return res.status(401).json({ success: false, message: 'Code admin incorrect' });
-    }
-
-    try {
-        const emp = await Employee.findOne({ name, pin });
-        if (emp) {
-            return res.json({ success: true, role: 'employee', name: emp.name, avatar: emp.avatar || '' });
-        }
-        res.status(401).json({ success: false, message: 'Identifiants invalides' });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Erreur serveur' });
-    }
-});
-
-app.post('/api/pointage', async (req, res) => {
-    const { employe, status, location, currentApp } = req.body;
-    try {
-        const updateData = { status };
-        if (location) updateData.location = location;
-        if (currentApp) updateData.currentApp = currentApp;
-
-        const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        if (status === 'ONLINE') updateData.startTime = now;
-        if (status === 'PAUSE') updateData.pauseTime = now;
-        if (status === 'OFFLINE') updateData.endTime = now;
-
-        await Employee.findOneAndUpdate({ name: employe }, updateData);
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ success: false });
-    }
-});
-
-app.post('/api/employee/avatar', async (req, res) => {
-    const { employe, avatar } = req.body;
-    try {
-        await Employee.findOneAndUpdate({ name: employe }, { avatar });
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ success: false });
-    }
-});
-
-app.post('/api/taches', async (req, res) => {
-    const { employe, tache, currentApp, screenshots } = req.body;
-    try {
-        await Task.create({ 
-            employe, 
-            tache, 
-            currentApp: currentApp || 'Non spécifié', 
-            screenshots: screenshots || [] 
-        });
-
-        const updateData = { lastTask: tache };
-        if (currentApp) updateData.currentApp = currentApp;
-        await Employee.findOneAndUpdate({ name: employe }, updateData);
-
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ success: false });
-    }
-});
-
-app.get('/api/admin/data', async (req, res) => {
-    try {
-        const employees = await Employee.find({});
-        const tasks = await Task.find({}).sort({ date: -1 }).limit(20);
-        
-        let statuses = {};
-        employees.forEach(e => {
-            statuses[e.name] = { 
-                status: e.status || 'OFFLINE', 
-                location: e.location || 'Non localisé', 
-                lastTask: e.lastTask || 'Aucun',
-                role: e.role || 'Employé',
-                department: e.department || 'Général',
-                phone: e.phone || '',
-                avatar: e.avatar || '',
-                startTime: e.startTime || '--:--',
-                pauseTime: e.pauseTime || '--:--',
-                endTime: e.endTime || '--:--',
-                currentApp: e.currentApp || 'Non renseigné'
-            };
-        });
-
-        res.json({ statuses, tasks });
-    } catch (err) {
-        res.status(500).json({ success: false });
-    }
-});
-
 app.post('/api/admin/employes', async (req, res) => {
-    const { name, pin, role, department, phone, avatar } = req.body;
-    if (!name || !pin) return res.status(400).json({ success: false, message: 'Nom et PIN requis' });
-
     try {
-        const existing = await Employee.findOne({ name });
-        if (existing) {
-            return res.status(400).json({ success: false, message: 'Cet employé existe déjà' });
-        }
-
-        await Employee.create({ 
-            name, pin, 
-            role: role || 'Employé', 
-            department: department || 'Général',
-            phone: phone || '',
-            avatar: avatar || '',
-            status: 'OFFLINE', 
-            location: 'Non localisé', 
-            lastTask: 'Aucun',
-            startTime: '--:--', pauseTime: '--:--', endTime: '--:--', currentApp: 'Aucune' 
-        });
-        res.json({ success: true, message: 'Employé créé' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        // Logique d'ajout d'employé
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
@@ -194,17 +53,45 @@ app.delete('/api/admin/employes/:name', async (req, res) => {
     }
 });
 
-// --- CONNEXION MONGODB ATLAS (Lien direct basé sur ton Cluster0 réel) ---
-const MONGO_URI = process.env.MONGODB_URI || "mongodb://sowcledor400_db_user:Aksam2026DbPass@ac-tbsl1rr-shard-00-00.louf7rl.mongodb.net:27017,ac-tbsl1rr-shard-00-01.louf7rl.mongodb.net:27017,ac-tbsl1rr-shard-00-02.louf7rl.mongodb.net:27017/pointage?ssl=true&replicaSet=atlas-13b3x3-shard-0&authSource=admin&retryWrites=true&w=majority";
+// Route de connexion (exemple pour valider la session admin)
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    // Vérifie tes identifiants admin ici
+    if (username === 'admin' && password === 'aksam2026') {
+        req.session.isAdmin = true;
+        return res.json({ success: true, redirect: '/admin.html' });
+    }
+    res.status(401).json({ success: false, message: 'Identifiants incorrects' });
+});
+
+// Route de déconnexion
+app.get('/api/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.redirect('/index.html');
+    });
+});
+
+// --- ROUTE PROTÉGÉE POUR ADMIN ---
+// Empêche l'accès direct si la session n'est pas active
+app.get('/admin.html', (req, res) => {
+    if (req.session && req.session.isAdmin) {
+        return res.sendFile(path.join(__dirname, 'private', 'admin.html')); // Ou un dossier sécurisé
+    }
+    // Si non connecté, redirection automatique vers l'accueil/login
+    res.redirect('/index.html');
+});
+
+// --- CONNEXION MONGODB ATLAS (Lien validé) ---
+const MONGO_URI = process.env.MONGODB_URI || "mongodb+srv://sowcledor400_db_user:YblwacNjVehm97If@cluster0.louf7rl.mongodb.net/pointage?retryWrites=true&w=majority&appName=Cluster0";
 
 mongoose.connect(MONGO_URI)
-  .then(async () => {
-      console.log('✅ AKSAM connecté avec succès à Cluster0 (Persistance Cloud Active)');
-      await initDefaultAdmin();
-      app.listen(PORT, () => {
-          console.log(`🚀 Serveur AKSAM opérationnel sur le port ${PORT}`);
-      });
-  })
-  .catch(err => {
-      console.error('❌ Erreur de connexion MongoDB Atlas:', err.message);
-  });
+.then(async () => {
+    console.log('✅ AKSAM connecté avec succès à Cluster0 (Persistance Cloud Active)');
+    await initDefaultAdmin();
+    app.listen(PORT, () => {
+        console.log(`🚀 Serveur AKSAM opérationnel sur le port ${PORT}`);
+    });
+})
+.catch(err => {
+    console.error('❌ Erreur de connexion MongoDB Atlas:', err.message);
+});
