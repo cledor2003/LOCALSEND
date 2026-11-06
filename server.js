@@ -6,13 +6,14 @@ const session = require('express-session');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// --- CONFIGURATION RENDER PROXY ---
+// --- CONFIGURATION ESSENTIELLE POUR RENDER (Proxy) ---
 app.set('trust proxy', 1);
 
 // --- MIDDLEWARES ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Configuration des sessions sécurisées pour le cloud
 app.use(session({
     secret: 'cle_secrete_localsend_aksam',
     resave: false,
@@ -20,60 +21,58 @@ app.use(session({
     cookie: { 
         secure: false, 
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000
+        maxAge: 24 * 60 * 60 * 1000 // 24 heures
     }
 }));
 
-// --- PROTECTION ROUTE ADMIN ---
+// --- MIDDLEWARE DE PROTECTION ADMIN ---
 function verifierAdmin(req, res, next) {
     if (req.session && req.session.isAdmin) {
         return next();
     }
-    return res.redirect('/index.html');
+    return res.redirect('/login.html');
 }
 
-// Servir les fichiers publics
+// Servir les fichiers publics (index, login, styles, etc.)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Route administrative privée
+// --- ROUTE PROTÉGÉE POUR ADMIN ---
 app.get('/admin.html', verifierAdmin, (req, res) => {
     res.sendFile(path.join(__dirname, 'private', 'admin.html'));
 });
 
-// --- MODÈLES MONGODB ---
+// --- MODÈLE EMPLOYÉ ---
 const employeeSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
     pin: { type: String }
 });
 const Employee = mongoose.model('Employee', employeeSchema);
 
+// --- FONCTION INITIALISATION ADMIN ---
 async function initDefaultAdmin() {
-    console.log('✅ Initialisation du système terminée.');
+    console.log('✅ Système AKSAM initialisé avec succès.');
 }
 
-// --- ROUTE DE CONNEXION FLEXIBLE ---
+// --- ROUTE DE CONNEXION UNIFIÉE (Admin & Employés) ---
 app.post('/api/login', async (req, res) => {
     const { username, password, pin, code, role, type } = req.body;
     
-    // Récupère la valeur saisie dans le champ secret/PIN
     const secretUtilise = (password || pin || code || '').toString().trim();
-    // Récupère le type de rôle sélectionné dans la liste déroulante
     const roleSelectionne = (role || type || username || '').toString().toLowerCase();
 
-    // 1. CONNEXION ADMINISTRATEUR
-    // Valide si le mot de passe est aksam2026 OU si le rôle choisi est administrateur avec aksam2026
+    // 1. CAS DE L'ADMINISTRATEUR
     if (secretUtilise === 'aksam2026' || (roleSelectionne.includes('admin') && secretUtilise === 'aksam2026')) {
         req.session.isAdmin = true;
         req.session.userType = 'admin';
         req.session.userName = 'Administrateur';
         
         return req.session.save((err) => {
-            if (err) return res.status(500).json({ success: false, error: 'Erreur session.' });
+            if (err) return res.status(500).json({ success: false, error: 'Erreur de session serveur.' });
             return res.json({ success: true, redirect: '/admin.html' });
         });
     }
     
-    // 2. CONNEXION EMPLOYÉ / COLLABORATEUR
+    // 2. CAS D'UN EMPLOYÉ / COLLABORATEUR
     try {
         const nomCherche = (username || '').trim();
         const employeTrouve = await Employee.findOne({ 
@@ -86,19 +85,19 @@ app.post('/api/login', async (req, res) => {
             req.session.userName = employeTrouve.name;
             
             return req.session.save((err) => {
-                if (err) return res.status(500).json({ success: false, error: 'Erreur session.' });
+                if (err) return res.status(500).json({ success: false, error: 'Erreur de session serveur.' });
                 return res.json({ success: true, redirect: '/employe.html' });
             });
         }
     } catch (e) {
-        console.error("Erreur login employé:", e);
+        console.error("Erreur recherche employé:", e);
     }
     
-    // Si la vérification échoue
+    // Si aucun compte ne correspond
     res.status(401).json({ success: false, error: 'Identifiant ou code PIN incorrect.' });
 });
 
-// --- ROUTE INFORMATIONS SESSION ---
+// --- ROUTE POUR RÉCUPÉRER L'UTILISATEUR CONNECTÉ (Évite le "undefined") ---
 app.get('/api/current-user', (req, res) => {
     if (req.session && req.session.userName) {
         return res.json({ 
@@ -110,7 +109,7 @@ app.get('/api/current-user', (req, res) => {
     res.json({ loggedIn: false });
 });
 
-// --- DÉCONNEXION ---
+// --- ROUTE DE DÉCONNEXION ---
 app.get('/api/logout', (req, res) => {
     req.session.destroy(() => {
         res.redirect('/index.html');
