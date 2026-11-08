@@ -144,8 +144,8 @@
           </div>
           <div style="margin-bottom: 15px;">
             <label style="font-size:0.85rem; color:var(--text-muted); display:block; margin-bottom:5px;">Inviter des membres :</label>
-            <div id="m-participants-checkboxes" style="max-height: 100px; overflow-y: auto; background: rgba(3,7,18,0.8); padding: 10px; border-radius: 12px; border: 1px solid var(--border);">
-              <!-- Employés -->
+            <div id="m-participants-checkboxes" style="max-height: 120px; overflow-y: auto; background: rgba(3,7,18,0.8); padding: 10px; border-radius: 12px; border: 1px solid var(--border);">
+              <span style="color:var(--text-muted); font-size:0.85rem;">Chargement des membres...</span>
             </div>
           </div>
           <button type="submit" class="btn btn-primary">Programmer et inviter</button>
@@ -154,7 +154,7 @@
 
       <div class="glass-card">
         <h3>🗓️ Agenda des Réunions Programmées</h3>
-        <div id="admin-agenda-list" style="max-height: 270px; overflow-y: auto; margin-top: 15px;">
+        <div id="admin-agenda-list" style="max-height: 290px; overflow-y: auto; margin-top: 15px;">
           <p style="color: var(--text-muted); font-size: 0.9rem;">Aucune réunion dans l'agenda.</p>
         </div>
       </div>
@@ -244,31 +244,28 @@
     function closeModal() { modal.classList.remove('active'); }
     let currentData = {};
 
-    async function loadEmployeesForMeeting() {
-      try {
-        const res = await fetch('/api/admin/employes');
-        const employees = await res.json();
-        const container = document.getElementById('m-participants-checkboxes');
-        container.innerHTML = '';
-        if(employees.length === 0) {
-          container.innerHTML = '<span style="color:var(--text-muted);">Aucun employé disponible.</span>';
-          return;
-        }
-        employees.forEach(emp => {
-          container.innerHTML += `
-            <label style="display: block; margin-bottom: 5px; cursor: pointer; font-size: 0.9rem;">
-              <input type="checkbox" name="participant" value="${emp.name}" style="width: auto; margin-right: 8px;"> ${emp.name} (${emp.role || 'Employé'})
-            </label>
-          `;
-        });
-      } catch(e) { console.error(e); }
+    // Fonction globale pour peupler les cases à cocher des membres
+    function renderParticipantsCheckboxes(employees) {
+      const container = document.getElementById('m-participants-checkboxes');
+      if (!container) return;
+      container.innerHTML = '';
+      if (!employees || employees.length === 0) {
+        container.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Aucun employé enregistré.</span>';
+        return;
+      }
+      employees.forEach(emp => {
+        container.innerHTML += `
+          <label style="display: block; margin-bottom: 6px; cursor: pointer; font-size: 0.9rem; color: white;">
+            <input type="checkbox" name="participant" value="${emp.name}" style="width: auto; margin-right: 8px;"> ${emp.name} (${emp.role || 'Employé'})
+          </label>
+        `;
+      });
     }
-    loadEmployeesForMeeting();
 
     async function createMeeting(e) {
       e.preventDefault();
-      const title = document.getElementById('m-title').value;
-      const link = document.getElementById('m-link').value;
+      const title = document.getElementById('m-title').value.trim();
+      const link = document.getElementById('m-link').value.trim();
       const date = document.getElementById('m-date').value;
       const time = document.getElementById('m-time').value;
       
@@ -287,9 +284,8 @@
       });
 
       if (res.ok) {
-        alert('Réunion programmée et ajoutée à l\'agenda !');
+        alert('Réunion programmée avec succès !');
         e.target.reset();
-        loadEmployeesForMeeting();
         fetchAdminData();
       } else {
         const err = await res.json();
@@ -303,6 +299,11 @@
         const data = await res.json();
         currentData = data;
         
+        // Met à jour la liste des employés pour la sélection des réunions
+        if (data.employeesList) {
+          renderParticipantsCheckboxes(data.employeesList);
+        }
+
         // Rendu répertoire
         const tbody = document.getElementById('directory-body');
         tbody.innerHTML = '';
@@ -458,7 +459,6 @@
         closeModal();
         e.target.reset();
         fetchAdminData();
-        loadEmployeesForMeeting();
       } else {
         const err = await res.json();
         alert('Erreur : ' + err.error);
@@ -469,7 +469,6 @@
       if(confirm(`Supprimer ${name} ?`)) {
         await fetch(`/api/admin/employes/${name}`, { method: 'DELETE' });
         fetchAdminData();
-        loadEmployeesForMeeting();
       }
     }
 

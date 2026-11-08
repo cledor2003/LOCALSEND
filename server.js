@@ -65,7 +65,7 @@ const meetingSchema = new mongoose.Schema({
     time: { type: String, required: true },
     organizer: { type: String, required: true },
     participants: [String],
-    link: { type: String, required: true }, // Lien rendu obligatoire
+    link: { type: String, required: true },
     createdAt: { type: Date, default: Date.now }
 });
 const Meeting = mongoose.model('Meeting', meetingSchema);
@@ -134,9 +134,19 @@ app.get('/api/admin/data', verifierAdmin, async (req, res) => {
             };
         });
 
-        res.json({ success: true, statuses, tasks: reports, meetings });
+        res.json({ success: true, statuses, tasks: reports, meetings, employeesList: employees });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// --- GESTION DES EMPLOYÉS ---
+app.get('/api/admin/employes', verifierAdmin, async (req, res) => {
+    try {
+        const employes = await Employee.find();
+        res.json(employes);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
