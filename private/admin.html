@@ -50,7 +50,7 @@
     .brand-sub { font-size: 0.75rem; color: var(--text-muted); }
 
     .nav-menu { display: flex; flex-direction: column; gap: 10px; flex-grow: 1; }
-    .nav-item { padding: 12px 16px; border-radius: 12px; color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 0.95rem; display: flex; align-items: center; gap: 12px; transition: 0.2s; }
+    .nav-item { padding: 12px 16px; border-radius: 12px; color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 0.95rem; display: flex; align-items: center; gap: 12px; transition: 0.2s; cursor: pointer; }
     .nav-item.active, .nav-item:hover { background: rgba(56, 189, 248, 0.12); color: var(--primary); }
 
     main { margin-left: 260px; padding: 30px; width: calc(100% - 260px); min-height: 100vh; }
@@ -91,14 +91,6 @@
     .map-link { color: var(--primary); text-decoration: none; font-weight: 600; }
 
     .btn-logout-admin { background: rgba(248, 113, 113, 0.15); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.3); width: 100%; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; display: block; transition: 0.2s; }
-
-    @media print {
-      sidebar, header, .btn, .modal-overlay { display: none !important; }
-      main { margin: 0; padding: 0; width: 100%; color: black; }
-      body { background: white; color: black; }
-      .glass-card { background: white; border: none; box-shadow: none; color: black; }
-      table, th, td { color: black !important; border-bottom: 1px solid #ccc !important; }
-    }
   </style>
 </head>
 <body>
@@ -116,9 +108,9 @@
 
       <div class="nav-menu">
         <a href="#" class="nav-item active">📊 Tableau de Bord</a>
-        <a href="#" class="nav-item" onclick="openModal()">➕ Nouvel Employé</a>
-        <a href="#" class="nav-item" onclick="exportExcel()">📥 Exporter Excel</a>
-        <a href="#" class="nav-item" onclick="window.print()">📄 Imprimer / PDF</a>
+        <a class="nav-item" onclick="openModal()">➕ Nouvel Employé</a>
+        <a class="nav-item" onclick="exportExcel()">📥 Exporter Excel</a>
+        <a class="nav-item" onclick="window.print()">📄 Imprimer / PDF</a>
       </div>
     </div>
 
@@ -138,6 +130,28 @@
         <button class="btn btn-primary" onclick="openModal()">+ Nouvel Employé</button>
       </div>
     </header>
+
+    <!-- PLANIFICATION DE RÉUNIONS -->
+    <div class="glass-card">
+      <h3>📅 Planifier une Réunion d'Équipe</h3>
+      <form id="meeting-form" style="margin-top: 15px;" onsubmit="createMeeting(event)">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <input type="text" id="m-title" placeholder="Sujet de la réunion" required>
+          <input type="text" id="m-link" placeholder="Lien visio (ex: Jitsi / Google Meet)">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <input type="date" id="m-date" required>
+          <input type="time" id="m-time" required>
+        </div>
+        <div style="margin-bottom: 15px;">
+          <label style="font-size:0.85rem; color:var(--text-muted); display:block; margin-bottom:5px;">Inviter des membres :</label>
+          <div id="m-participants-checkboxes" style="max-height: 120px; overflow-y: auto; background: rgba(3,7,18,0.8); padding: 10px; border-radius: 12px; border: 1px solid var(--border);">
+            <!-- Les employés s'affichent ici -->
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Programmer et inviter</button>
+      </form>
+    </div>
 
     <div class="glass-card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -222,6 +236,52 @@
     function openModal() { modal.classList.add('active'); }
     function closeModal() { modal.classList.remove('active'); }
     let currentData = {};
+
+    async function loadEmployeesForMeeting() {
+      try {
+        const res = await fetch('/api/admin/employes');
+        const employees = await res.json();
+        const container = document.getElementById('m-participants-checkboxes');
+        container.innerHTML = '';
+        if(employees.length === 0) {
+          container.innerHTML = '<span style="color:var(--text-muted);">Aucun employé disponible.</span>';
+          return;
+        }
+        employees.forEach(emp => {
+          container.innerHTML += `
+            <label style="display: block; margin-bottom: 5px; cursor: pointer; font-size: 0.9rem;">
+              <input type="checkbox" name="participant" value="${emp.name}" style="width: auto; margin-right: 8px;"> ${emp.name} (${emp.role || 'Employé'})
+            </label>
+          `;
+        });
+      } catch(e) { console.error(e); }
+    }
+    loadEmployeesForMeeting();
+
+    async function createMeeting(e) {
+      e.preventDefault();
+      const title = document.getElementById('m-title').value;
+      const link = document.getElementById('m-link').value;
+      const date = document.getElementById('m-date').value;
+      const time = document.getElementById('m-time').value;
+      
+      const checkboxes = document.querySelectorAll('input[name="participant"]:checked');
+      const participants = Array.from(checkboxes).map(cb => cb.value);
+
+      const res = await fetch('/api/meetings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, date, time, link, participants })
+      });
+
+      if (res.ok) {
+        alert('Réunion programmée avec succès et invitations envoyées !');
+        e.target.reset();
+        loadEmployeesForMeeting();
+      } else {
+        alert('Erreur lors de la programmation.');
+      }
+    }
 
     async function fetchAdminData() {
       try {
@@ -365,6 +425,7 @@
         closeModal();
         e.target.reset();
         fetchAdminData();
+        loadEmployeesForMeeting();
       } else {
         const err = await res.json();
         alert('Erreur : ' + err.message);
@@ -375,6 +436,7 @@
       if(confirm(`Supprimer ${name} ?`)) {
         await fetch(`/api/admin/employes/${name}`, { method: 'DELETE' });
         fetchAdminData();
+        loadEmployeesForMeeting();
       }
     }
 

@@ -157,6 +157,14 @@
       <button type="submit" class="btn-submit">Envoyer le rapport quotidien</button>
     </form>
   </div>
+
+  <!-- Réunions Programmées -->
+  <div class="card">
+    <h2>📅 Mes Réunions & Invitations</h2>
+    <div id="employee-meetings-list" style="margin-top: 10px;">
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Chargement des réunions...</p>
+    </div>
+  </div>
   
   <div class="logout-area">
     <a href="/api/logout" class="logout-link">⏻ Se déconnecter de la session</a>
@@ -246,6 +254,39 @@
       alert('Erreur lors de l\'envoi du rapport.');
     }
   }
+
+  async function loadEmployeeMeetings() {
+    try {
+      const res = await fetch('/api/meetings');
+      const data = await res.json();
+      const listContainer = document.getElementById('employee-meetings-list');
+      
+      if (!data.meetings || data.meetings.length === 0) {
+        listContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Aucune réunion programmée pour le moment.</p>';
+        return;
+      }
+
+      listContainer.innerHTML = '';
+      data.meetings.forEach(m => {
+        listContainer.innerHTML += `
+          <div style="background: rgba(3, 7, 18, 0.6); padding: 15px; border-radius: 12px; margin-bottom: 10px; border-left: 4px solid var(--primary);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong>📌 ${m.title}</strong>
+              <span style="font-size: 0.75rem; color: var(--warning);">🕒 ${m.date} à ${m.time}</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 5px;">Organisé par : ${m.organizer}</p>
+            <div style="margin-top: 10px;">
+              <a href="${m.link}" target="_blank" class="btn btn-primary" style="display:inline-block; padding:8px 14px; font-size:0.85rem; text-decoration:none; text-align:center;">🎥 Rejoindre la réunion</a>
+            </div>
+          </div>
+        `;
+      });
+    } catch(e) {
+      console.error(e);
+    }
+  }
+  loadEmployeeMeetings();
+  setInterval(loadEmployeeMeetings, 10000);
 </script>
 </body>
 </html>

@@ -59,6 +59,17 @@ const reportSchema = new mongoose.Schema({
 });
 const Report = mongoose.model('Report', reportSchema);
 
+const meetingSchema = new mongoose.Schema({
+    title: { type: String, required: true },
+    date: { type: String, required: true },
+    time: { type: String, required: true },
+    organizer: { type: String, required: true },
+    participants: [String],
+    link: { type: String },
+    createdAt: { type: Date, default: Date.now }
+});
+const Meeting = mongoose.model('Meeting', meetingSchema);
+
 // --- ROUTES AUTH ---
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
@@ -148,6 +159,43 @@ app.delete('/api/admin/employes/:name', verifierAdmin, async (req, res) => {
     try {
         await Employee.findOneAndDelete({ name: req.params.name });
         res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// --- API RÉUNIONS ---
+app.post('/api/meetings', async (req, res) => {
+    if (!req.session || !req.session.userName) return res.status(401).json({ error: 'Non connecté' });
+    try {
+        const { title, date, time, participants, link } = req.body;
+        const newMeeting = await Meeting.create({
+            title,
+            date,
+            time,
+            organizer: req.session.userName,
+            participants: participants || [],
+            link: link || 'https://meet.jit.si/AKSAM_Reunion_' + Date.now()
+        });
+        res.json({ success: true, meeting: newMeeting });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.get('/api/meetings', async (req, res) => {
+    if (!req.session || !req.session.userName) return res.status(401).json({ error: 'Non connecté' });
+    try {
+        const userName = req.session.userName;
+        let meetings;
+        if (req.session.isAdmin) {
+            meetings = await Meeting.find().sort({ createdAt: -1 });
+        } else {
+            meetings = await Meeting.find({
+                $or: [{ organizer: userName }, { participants: userName }]
+            }).sort({ createdAt: -1 });
+        }
+        res.json({ success: true, meetings });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
