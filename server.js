@@ -65,7 +65,7 @@ const meetingSchema = new mongoose.Schema({
     time: { type: String, required: true },
     organizer: { type: String, required: true },
     participants: [String],
-    link: { type: String },
+    link: { type: String, required: true }, // Lien rendu obligatoire
     createdAt: { type: Date, default: Date.now }
 });
 const Meeting = mongoose.model('Meeting', meetingSchema);
@@ -115,6 +115,7 @@ app.get('/api/admin/data', verifierAdmin, async (req, res) => {
     try {
         const employees = await Employee.find();
         const reports = await Report.find().sort({ date: -1 }).limit(50);
+        const meetings = await Meeting.find().sort({ createdAt: -1 });
         
         const statuses = {};
         employees.forEach(emp => {
@@ -133,7 +134,7 @@ app.get('/api/admin/data', verifierAdmin, async (req, res) => {
             };
         });
 
-        res.json({ success: true, statuses, tasks: reports });
+        res.json({ success: true, statuses, tasks: reports, meetings });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
@@ -165,17 +166,19 @@ app.delete('/api/admin/employes/:name', verifierAdmin, async (req, res) => {
 });
 
 // --- API RÉUNIONS ---
-app.post('/api/meetings', async (req, res) => {
-    if (!req.session || !req.session.userName) return res.status(401).json({ error: 'Non connecté' });
+app.post('/api/meetings', verifierAdmin, async (req, res) => {
     try {
         const { title, date, time, participants, link } = req.body;
+        if (!link) {
+            return res.status(400).json({ success: false, error: "Le lien de réunion est obligatoire." });
+        }
         const newMeeting = await Meeting.create({
             title,
             date,
             time,
-            organizer: req.session.userName,
+            organizer: req.session.userName || 'Administrateur',
             participants: participants || [],
-            link: link || 'https://meet.jit.si/AKSAM_Reunion_' + Date.now()
+            link
         });
         res.json({ success: true, meeting: newMeeting });
     } catch (err) {

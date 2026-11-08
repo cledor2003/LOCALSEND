@@ -131,26 +131,33 @@
       </div>
     </header>
 
-    <!-- PLANIFICATION DE RÉUNIONS -->
-    <div class="glass-card">
-      <h3>📅 Planifier une Réunion d'Équipe</h3>
-      <form id="meeting-form" style="margin-top: 15px;" onsubmit="createMeeting(event)">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+    <!-- PLANIFICATION DE RÉUNIONS & AGENDA -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <div class="glass-card">
+        <h3>📅 Planifier une Réunion</h3>
+        <form id="meeting-form" style="margin-top: 15px;" onsubmit="createMeeting(event)">
           <input type="text" id="m-title" placeholder="Sujet de la réunion" required>
-          <input type="text" id="m-link" placeholder="Lien visio (ex: Jitsi / Google Meet)">
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-          <input type="date" id="m-date" required>
-          <input type="time" id="m-time" required>
-        </div>
-        <div style="margin-bottom: 15px;">
-          <label style="font-size:0.85rem; color:var(--text-muted); display:block; margin-bottom:5px;">Inviter des membres :</label>
-          <div id="m-participants-checkboxes" style="max-height: 120px; overflow-y: auto; background: rgba(3,7,18,0.8); padding: 10px; border-radius: 12px; border: 1px solid var(--border);">
-            <!-- Les employés s'affichent ici -->
+          <input type="text" id="m-link" placeholder="Lien visio obligatoire (ex: Meet / Jitsi)" required>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <input type="date" id="m-date" required>
+            <input type="time" id="m-time" required>
           </div>
+          <div style="margin-bottom: 15px;">
+            <label style="font-size:0.85rem; color:var(--text-muted); display:block; margin-bottom:5px;">Inviter des membres :</label>
+            <div id="m-participants-checkboxes" style="max-height: 100px; overflow-y: auto; background: rgba(3,7,18,0.8); padding: 10px; border-radius: 12px; border: 1px solid var(--border);">
+              <!-- Employés -->
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">Programmer et inviter</button>
+        </form>
+      </div>
+
+      <div class="glass-card">
+        <h3>🗓️ Agenda des Réunions Programmées</h3>
+        <div id="admin-agenda-list" style="max-height: 270px; overflow-y: auto; margin-top: 15px;">
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Aucune réunion dans l'agenda.</p>
         </div>
-        <button type="submit" class="btn btn-primary">Programmer et inviter</button>
-      </form>
+      </div>
     </div>
 
     <div class="glass-card">
@@ -189,7 +196,7 @@
     </div>
   </main>
 
-  <!-- MODAL -->
+  <!-- MODAL AJOUT EMPLOYÉ -->
   <div class="modal-overlay" id="employee-modal">
     <div class="modal-content">
       <h3>📝 Ajouter un Collaborateur AKSAM</h3>
@@ -265,6 +272,11 @@
       const date = document.getElementById('m-date').value;
       const time = document.getElementById('m-time').value;
       
+      if (!link) {
+        alert("Le lien de réunion est obligatoire !");
+        return;
+      }
+
       const checkboxes = document.querySelectorAll('input[name="participant"]:checked');
       const participants = Array.from(checkboxes).map(cb => cb.value);
 
@@ -275,11 +287,13 @@
       });
 
       if (res.ok) {
-        alert('Réunion programmée avec succès et invitations envoyées !');
+        alert('Réunion programmée et ajoutée à l\'agenda !');
         e.target.reset();
         loadEmployeesForMeeting();
+        fetchAdminData();
       } else {
-        alert('Erreur lors de la programmation.');
+        const err = await res.json();
+        alert('Erreur : ' + (err.error || 'Impossible de programmer'));
       }
     }
 
@@ -289,9 +303,9 @@
         const data = await res.json();
         currentData = data;
         
+        // Rendu répertoire
         const tbody = document.getElementById('directory-body');
         tbody.innerHTML = '';
-
         if (!data.statuses || Object.keys(data.statuses).length === 0) {
           tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text-muted);">Aucun employé.</td></tr>';
         } else {
@@ -349,6 +363,25 @@
           }
         }
 
+        // Rendu Agenda des réunions admin
+        const agendaList = document.getElementById('admin-agenda-list');
+        if (!data.meetings || data.meetings.length === 0) {
+          agendaList.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Aucune réunion dans l\'agenda.</p>';
+        } else {
+          agendaList.innerHTML = '';
+          data.meetings.forEach(m => {
+            agendaList.innerHTML += `
+              <div style="background: rgba(3, 7, 18, 0.6); padding: 12px; border-radius: 10px; margin-bottom: 8px; border-left: 3px solid var(--primary);">
+                <strong>📌 ${m.title}</strong>
+                <div style="font-size:0.75rem; color:var(--warning); margin-top:2px;">🕒 ${m.date} à ${m.time}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Invités : ${m.participants.join(', ') || 'Tous'}</div>
+                <a href="${m.link}" target="_blank" class="btn btn-primary" style="margin-top:8px; padding:4px 10px; font-size:0.75rem;">🎥 Ouvrir le lien</a>
+              </div>
+            `;
+          });
+        }
+
+        // Rendu des tâches/rapports
         const feed = document.getElementById('tasks-feed');
         if (!data.tasks || data.tasks.length === 0) {
           feed.innerHTML = '<p style="color: var(--text-muted);">Aucun rapport.</p>';
@@ -428,7 +461,7 @@
         loadEmployeesForMeeting();
       } else {
         const err = await res.json();
-        alert('Erreur : ' + err.message);
+        alert('Erreur : ' + err.error);
       }
     });
 
