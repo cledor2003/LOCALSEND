@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AKSAM - Administration & Supervision</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../style.css">
   <style>
     :root {
       --bg-overlay: rgba(3, 7, 18, 0.90);
@@ -92,8 +91,44 @@
     .map-link { color: var(--primary); text-decoration: none; font-weight: 600; }
 
     .btn-logout-admin { background: rgba(248, 113, 113, 0.15); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.3); width: 100%; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; display: block; transition: 0.2s; }
+
+    .theme-toggle {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+    }
+
+    /* --- MODE CLAIR --- */
+    body.light-mode {
+      background: linear-gradient(rgba(241, 245, 249, 0.8), rgba(226, 232, 240, 0.9)), url('https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed !important;
+      background-size: cover !important;
+      color: #0f172a !important;
+    }
+    body.light-mode .glass-card,
+    body.light-mode sidebar,
+    body.light-mode header,
+    body.light-mode .modal-content {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border-color: rgba(0, 0, 0, 0.1) !important;
+      color: #0f172a !important;
+    }
+    body.light-mode h2, body.light-mode h3, body.light-mode th, body.light-mode td, body.light-mode label {
+      color: #0f172a !important;
+    }
+    body.light-mode input, body.light-mode select {
+      background: rgba(241, 245, 249, 0.9) !important;
+      color: #0f172a !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+    }
   </style>
-  <script src="/theme.js" defer></script>
 </head>
 <body>
 
@@ -248,6 +283,27 @@
   </div>
 
   <script>
+    // --- GESTION DU THÈME (MODE SOMBRE / CLAIR) ---
+    document.addEventListener('DOMContentLoaded', () => {
+      const themeToggle = document.getElementById('themeToggle');
+      if (themeToggle) {
+        const savedTheme = localStorage.getItem('ak_theme') || 'dark';
+        if (savedTheme === 'light') {
+          document.body.classList.add('light-mode');
+          themeToggle.textContent = '🌙';
+        } else {
+          themeToggle.textContent = '☀️';
+        }
+
+        themeToggle.addEventListener('click', () => {
+          document.body.classList.toggle('light-mode');
+          const isLight = document.body.classList.contains('light-mode');
+          themeToggle.textContent = isLight ? '🌙' : '☀️';
+          localStorage.setItem('ak_theme', isLight ? 'light' : 'dark');
+        });
+      }
+    });
+
     const modal = document.getElementById('employee-modal');
     function openModal() { modal.classList.add('active'); }
     function closeModal() { modal.classList.remove('active'); }
