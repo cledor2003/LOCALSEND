@@ -137,7 +137,13 @@
         <h3>📅 Planifier une Réunion</h3>
         <form id="meeting-form" style="margin-top: 15px;" onsubmit="createMeeting(event)">
           <input type="text" id="m-title" placeholder="Sujet de la réunion" required>
-          <input type="text" id="m-link" placeholder="Lien visio obligatoire (ex: Meet / Jitsi)" required>
+          
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="m-link" placeholder="Lien visio (ex: Meet / Jitsi)" required style="margin-bottom: 0;">
+            <button type="button" class="btn btn-secondary" onclick="genererLienJitsi()" style="white-space: nowrap; height: 46px;">⚡ Auto Jitsi</button>
+          </div>
+          <div style="height: 15px;"></div>
+
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <input type="date" id="m-date" required>
             <input type="time" id="m-time" required>
@@ -154,7 +160,7 @@
 
       <div class="glass-card">
         <h3>🗓️ Agenda des Réunions Programmées</h3>
-        <div id="admin-agenda-list" style="max-height: 290px; overflow-y: auto; margin-top: 15px;">
+        <div id="admin-agenda-list" style="max-height: 310px; overflow-y: auto; margin-top: 15px;">
           <p style="color: var(--text-muted); font-size: 0.9rem;">Aucune réunion dans l'agenda.</p>
         </div>
       </div>
@@ -244,7 +250,11 @@
     function closeModal() { modal.classList.remove('active'); }
     let currentData = {};
 
-    // Fonction globale pour peupler les cases à cocher des membres
+    function genererLienJitsi() {
+      const uniqueRoom = 'AKSAM_Reunion_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+      document.getElementById('m-link').value = `https://meet.jit.si/${uniqueRoom}`;
+    }
+
     function renderParticipantsCheckboxes(employees) {
       const container = document.getElementById('m-participants-checkboxes');
       if (!container) return;
@@ -299,12 +309,10 @@
         const data = await res.json();
         currentData = data;
         
-        // Met à jour la liste des employés pour la sélection des réunions
         if (data.employeesList) {
           renderParticipantsCheckboxes(data.employeesList);
         }
 
-        // Rendu répertoire
         const tbody = document.getElementById('directory-body');
         tbody.innerHTML = '';
         if (!data.statuses || Object.keys(data.statuses).length === 0) {
@@ -364,7 +372,6 @@
           }
         }
 
-        // Rendu Agenda des réunions admin
         const agendaList = document.getElementById('admin-agenda-list');
         if (!data.meetings || data.meetings.length === 0) {
           agendaList.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Aucune réunion dans l\'agenda.</p>';
@@ -382,7 +389,6 @@
           });
         }
 
-        // Rendu des tâches/rapports
         const feed = document.getElementById('tasks-feed');
         if (!data.tasks || data.tasks.length === 0) {
           feed.innerHTML = '<p style="color: var(--text-muted);">Aucun rapport.</p>';
