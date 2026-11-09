@@ -5,7 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Espace Collaborateur — AKSAM</title>
 <link rel="stylesheet" href="style.css" />
-<script src="/theme.js"></script>
+<style>
+  /* Styles complémentaires pour le mode clair sur la page de login */
+  body.light-mode .card,
+  body.light-mode .hero {
+    background: rgba(255, 255, 255, 0.9) !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+    color: #0f172a !important;
+  }
+  body.light-mode .hero-brand,
+  body.light-mode input {
+    color: #0f172a !important;
+  }
+  body.light-mode input {
+    background: rgba(241, 245, 249, 0.9) !important;
+    border-color: rgba(0, 0, 0, 0.15) !important;
+  }
+  body.light-mode .hero-tagline,
+  body.light-mode .label,
+  body.light-mode .footnote a {
+    color: #64748b !important;
+  }
+</style>
 </head>
 <body>
 <div class="wrap" style="max-width:420px; padding-top:60px;">
@@ -36,51 +57,72 @@
 </div>
 
 <script>
-const errorBox = document.getElementById("error");
-function showError(msg) { errorBox.textContent = msg; errorBox.style.display = "block"; }
-function clearError() { errorBox.style.display = "none"; }
+  // Gestion directe du thème sombre/clair
+  document.addEventListener('DOMContentLoaded', () => {
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+      const savedTheme = localStorage.getItem('ak_theme') || 'dark';
+      if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+        themeToggle.textContent = '🌙';
+      } else {
+        themeToggle.textContent = '☀️';
+      }
 
-async function attemptEmployeLogin() {
-  clearError();
-  const username = document.getElementById("username").value.trim();
-  const pin = document.getElementById("pin").value.trim();
-  const btn = document.getElementById("loginBtn");
-  
-  if (!username) {
-    showError("Veuillez saisir votre nom d'employé.");
-    return;
-  }
+      themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('light-mode');
+        const isLight = document.body.classList.contains('light-mode');
+        themeToggle.textContent = isLight ? '🌙' : '☀️';
+        localStorage.setItem('ak_theme', isLight ? 'light' : 'dark');
+      });
+    }
+  });
 
-  btn.disabled = true;
-  btn.textContent = "Connexion…";
-  
-  try {
-    const res = await fetch("/api/employe/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, pin }),
-    });
+  const errorBox = document.getElementById("error");
+  function showError(msg) { errorBox.textContent = msg; errorBox.style.display = "block"; }
+  function clearError() { errorBox.style.display = "none"; }
+
+  async function attemptEmployeLogin() {
+    clearError();
+    const username = document.getElementById("username").value.trim();
+    const pin = document.getElementById("pin").value.trim();
+    const btn = document.getElementById("loginBtn");
     
-    const data = await res.json().catch(() => null);
-
-    if (res.ok && data && data.success) {
-      window.location.href = "/employe.html";
+    if (!username) {
+      showError("Veuillez saisir votre nom d'employé.");
       return;
     }
-    
-    showError((data && data.error) || "Nom d'employé ou code PIN incorrect.");
-  } catch (e) {
-    showError("Impossible de contacter le serveur.");
-  }
-  
-  btn.disabled = false;
-  btn.textContent = "Accéder à mon espace";
-}
 
-document.getElementById("loginBtn").onclick = attemptEmployeLogin;
-document.getElementById("pin").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") attemptEmployeLogin();
-});
+    btn.disabled = true;
+    btn.textContent = "Connexion…";
+    
+    try {
+      const res = await fetch("/api/employe/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, pin }),
+      });
+      
+      const data = await res.json().catch(() => null);
+
+      if (res.ok && data && data.success) {
+        window.location.href = "/employe.html";
+        return;
+      }
+      
+      showError((data && data.error) || "Nom d'employé ou code PIN incorrect.");
+    } catch (e) {
+      showError("Impossible de contacter le serveur.");
+    }
+    
+    btn.disabled = false;
+    btn.textContent = "Accéder à mon espace";
+  }
+
+  document.getElementById("loginBtn").onclick = attemptEmployeLogin;
+  document.getElementById("pin").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") attemptEmployeLogin();
+  });
 </script>
 </body>
 </html>

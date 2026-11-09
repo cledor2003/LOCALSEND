@@ -3,9 +3,30 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Connexion Administrateur — AKSAM</title>
+<title>Espace Collaborateur — AKSAM</title>
 <link rel="stylesheet" href="style.css" />
-<script src="/theme.js"></script>
+<style>
+  /* Styles complémentaires pour le mode clair sur la page de login */
+  body.light-mode .card,
+  body.light-mode .hero {
+    background: rgba(255, 255, 255, 0.9) !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+    color: #0f172a !important;
+  }
+  body.light-mode .hero-brand,
+  body.light-mode input {
+    color: #0f172a !important;
+  }
+  body.light-mode input {
+    background: rgba(241, 245, 249, 0.9) !important;
+    border-color: rgba(0, 0, 0, 0.15) !important;
+  }
+  body.light-mode .hero-tagline,
+  body.light-mode .label,
+  body.light-mode .footnote a {
+    color: #64748b !important;
+  }
+</style>
 </head>
 <body>
 <div class="wrap" style="max-width:420px; padding-top:60px;">
@@ -16,71 +37,92 @@
     <div class="hero-mark" style="width:64px; height:64px;">
       <img src="/logo.svg" alt="Logo AKSAM" width="40" height="40" />
     </div>
-    <h1 class="hero-brand" style="font-size:26px;">AKSAM ADMIN</h1>
-    <p class="hero-tagline">Portail de Gestion & Administration</p>
+    <h1 class="hero-brand" style="font-size:26px;">AKSAM ENTERPRISE</h1>
+    <p class="hero-tagline">Système de Suivi & Télétravail (Employé)</p>
   </div>
 
   <div id="error" class="error-box" style="display:none;"></div>
 
   <div class="card">
-    <div class="label">Identifiant Administrateur</div>
-    <input type="text" id="username" placeholder="admin" autocomplete="username" />
+    <div class="label">Nom complet (Identifiant Employé)</div>
+    <input type="text" id="username" placeholder="Ex: Amadou Sow" />
 
-    <div class="label" style="margin-top:16px;">Mot de passe</div>
-    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" style="letter-spacing:normal; font-size:15px; text-align:left;" />
+    <div class="label" style="margin-top:16px;">Code PIN secret</div>
+    <input type="password" id="pin" placeholder="••••" style="letter-spacing:normal; font-size:15px; text-align:left;" />
 
-    <button id="loginBtn" class="btn btn-primary btn-block" style="margin-top:22px;">Se connecter à l'Admin</button>
+    <button id="loginBtn" class="btn btn-primary btn-block" style="margin-top:22px;">Accéder à mon espace</button>
   </div>
 
-  <p class="footnote"><a href="/index.html" style="color:var(--text-dim); text-decoration:none;">← Accès au Portail Employés</a></p>
+  <p class="footnote"><a href="/login.html" style="color:var(--text-dim); text-decoration:none;">🔒 Accès Espace Administration</a></p>
 </div>
 
 <script>
-const errorBox = document.getElementById("error");
-function showError(msg) { errorBox.textContent = msg; errorBox.style.display = "block"; }
-function clearError() { errorBox.style.display = "none"; }
+  // Gestion directe du thème sombre/clair
+  document.addEventListener('DOMContentLoaded', () => {
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+      const savedTheme = localStorage.getItem('ak_theme') || 'dark';
+      if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+        themeToggle.textContent = '🌙';
+      } else {
+        themeToggle.textContent = '☀️';
+      }
 
-async function attemptAdminLogin() {
-  clearError();
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value;
-  const btn = document.getElementById("loginBtn");
-  
-  if (!username || !password) {
-    showError("Veuillez saisir l'identifiant et le mot de passe.");
-    return;
-  }
+      themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('light-mode');
+        const isLight = document.body.classList.contains('light-mode');
+        themeToggle.textContent = isLight ? '🌙' : '☀️';
+        localStorage.setItem('ak_theme', isLight ? 'light' : 'dark');
+      });
+    }
+  });
 
-  btn.disabled = true;
-  btn.textContent = "Connexion en cours…";
-  
-  try {
-    const res = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
+  const errorBox = document.getElementById("error");
+  function showError(msg) { errorBox.textContent = msg; errorBox.style.display = "block"; }
+  function clearError() { errorBox.style.display = "none"; }
+
+  async function attemptEmployeLogin() {
+    clearError();
+    const username = document.getElementById("username").value.trim();
+    const pin = document.getElementById("pin").value.trim();
+    const btn = document.getElementById("loginBtn");
     
-    const data = await res.json().catch(() => null);
-
-    if (res.ok && data && data.success) {
-      window.location.href = "/admin.html";
+    if (!username) {
+      showError("Veuillez saisir votre nom d'employé.");
       return;
     }
-    
-    showError((data && data.error) || "Identifiants administrateur incorrects.");
-  } catch (e) {
-    showError("Impossible de contacter le serveur.");
-  }
-  
-  btn.disabled = false;
-  btn.textContent = "Se connecter à l'Admin";
-}
 
-document.getElementById("loginBtn").onclick = attemptAdminLogin;
-document.getElementById("password").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") attemptAdminLogin();
-});
+    btn.disabled = true;
+    btn.textContent = "Connexion…";
+    
+    try {
+      const res = await fetch("/api/employe/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, pin }),
+      });
+      
+      const data = await res.json().catch(() => null);
+
+      if (res.ok && data && data.success) {
+        window.location.href = "/employe.html";
+        return;
+      }
+      
+      showError((data && data.error) || "Nom d'employé ou code PIN incorrect.");
+    } catch (e) {
+      showError("Impossible de contacter le serveur.");
+    }
+    
+    btn.disabled = false;
+    btn.textContent = "Accéder à mon espace";
+  }
+
+  document.getElementById("loginBtn").onclick = attemptEmployeLogin;
+  document.getElementById("pin").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") attemptEmployeLogin();
+  });
 </script>
 </body>
 </html>
