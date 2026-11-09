@@ -149,8 +149,8 @@
             <input type="time" id="m-time" required>
           </div>
           <div style="margin-bottom: 15px;">
-            <label style="font-size:0.85rem; color:var(--text-muted); display:block; margin-bottom:5px;">Inviter des membres :</label>
-            <div id="m-participants-checkboxes" style="max-height: 120px; overflow-y: auto; background: rgba(3,7,18,0.8); padding: 10px; border-radius: 12px; border: 1px solid var(--border);">
+            <label style="font-size:0.85rem; color:var(--text-muted); display:block; margin-bottom:5px;">Inviter des membres (Cochez pour sélectionner plusieurs) :</label>
+            <div id="m-participants-checkboxes" style="max-height: 130px; overflow-y: auto; background: rgba(3,7,18,0.8); padding: 10px; border-radius: 12px; border: 1px solid var(--border);">
               <span style="color:var(--text-muted); font-size:0.85rem;">Chargement des membres...</span>
             </div>
           </div>
@@ -264,9 +264,11 @@
         return;
       }
       employees.forEach(emp => {
+        // Enveloppe la case et le texte dans un label cliquable sur toute la largeur
         container.innerHTML += `
-          <label style="display: block; margin-bottom: 6px; cursor: pointer; font-size: 0.9rem; color: white;">
-            <input type="checkbox" name="participant" value="${emp.name}" style="width: auto; margin-right: 8px;"> ${emp.name} (${emp.role || 'Employé'})
+          <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer; font-size: 0.9rem; color: white; padding: 4px 8px; border-radius: 6px; background: rgba(255,255,255,0.03); transition: background 0.2s;">
+            <input type="checkbox" name="participant" value="${emp.name}" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);"> 
+            <span><strong>${emp.name}</strong> <small style="color:var(--text-muted);">(${emp.role || 'Employé'})</small></span>
           </label>
         `;
       });
@@ -294,7 +296,7 @@
       });
 
       if (res.ok) {
-        alert('Réunion programmée avec succès !');
+        alert('Réunion programmée avec succès et invitations envoyées !');
         e.target.reset();
         fetchAdminData();
       } else {
