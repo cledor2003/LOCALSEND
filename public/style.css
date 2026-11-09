@@ -23,10 +23,6 @@ body {
   background-size: cover;
   color: var(--text-main);
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
 }
 
 .wrap {
@@ -127,10 +123,6 @@ input:focus, select:focus {
   background: var(--primary-hover);
 }
 
-.btn-primary:active {
-  transform: scale(0.98);
-}
-
 .error-box {
   background: rgba(239, 68, 68, 0.15);
   border: 1px solid rgba(239, 68, 68, 0.3);
@@ -181,28 +173,37 @@ body.light-mode {
 }
 
 body.light-mode .card,
-body.light-mode .hero {
-  background: rgba(255, 255, 255, 0.85);
-  border-color: rgba(0, 0, 0, 0.1);
+body.light-mode .hero,
+body.light-mode .glass-card,
+body.light-mode sidebar {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #0f172a !important;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
 body.light-mode .hero-brand,
 body.light-mode .card input,
-body.light-mode .card select {
-  color: #0f172a;
+body.light-mode .card select,
+body.light-mode main input,
+body.light-mode main select,
+body.light-mode h2, body.light-mode h3, body.light-mode th, body.light-mode td {
+  color: #0f172a !important;
 }
 
 body.light-mode .card input,
-body.light-mode .card select {
-  background: rgba(241, 245, 249, 0.9);
-  border-color: rgba(0, 0, 0, 0.15);
+body.light-mode .card select,
+body.light-mode main input,
+body.light-mode main select {
+  background: rgba(241, 245, 249, 0.9) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
 }
 
 body.light-mode .hero-tagline,
 body.light-mode .label,
-body.light-mode .footnote a {
-  color: #64748b;
+body.light-mode .footnote a,
+body.light-mode th {
+  color: #64748b !important;
 }
 
 body.light-mode .theme-toggle {

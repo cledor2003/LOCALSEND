@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AKSAM - Administration & Supervision</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
   <style>
     :root {
       --bg-overlay: rgba(3, 7, 18, 0.90);
@@ -92,6 +93,7 @@
 
     .btn-logout-admin { background: rgba(248, 113, 113, 0.15); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.3); width: 100%; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; display: block; transition: 0.2s; }
   </style>
+  <script src="/theme.js" defer></script>
 </head>
 <body>
 
@@ -126,7 +128,8 @@
         <h2 style="font-size: 1.4rem;">Supervision du Télétravail</h2>
         <p style="font-size: 0.85rem; color: var(--text-muted);">Suivi en temps réel des collaborateurs AKSAM</p>
       </div>
-      <div>
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <button id="themeToggle" class="theme-toggle" title="Changer de thème">☀️</button>
         <button class="btn btn-primary" onclick="openModal()">+ Nouvel Employé</button>
       </div>
     </header>
@@ -249,7 +252,6 @@
     function openModal() { modal.classList.add('active'); }
     function closeModal() { modal.classList.remove('active'); }
     let currentData = {};
-    let employeesLoadedOnce = false; // Empêche le rechargement brutal des cases à cocher en boucle
 
     function genererLienJitsi() {
       const uniqueRoom = 'AKSAM_Reunion_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
@@ -260,7 +262,6 @@
       const container = document.getElementById('m-participants-checkboxes');
       if (!container) return;
       
-      // On mémorise les cases qui étaient déjà cochées pour ne pas perdre la sélection lors d'un rafraîchissement
       const checkedNames = Array.from(document.querySelectorAll('input[name="participant"]:checked')).map(cb => cb.value);
 
       container.innerHTML = '';
@@ -275,7 +276,7 @@
         container.innerHTML += `
           <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px; padding: 4px 6px; border-radius: 6px; background: rgba(255,255,255,0.02);">
             <input type="checkbox" id="${uniqueId}" name="participant" value="${emp.name}" ${isChecked} style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);"> 
-            <label for="${uniqueId}" style="cursor: pointer; font-size: 0.9rem; color: white; width: 100%; user-select: none;">
+            <label for="${uniqueId}" style="cursor: pointer; font-size: 0.9rem; color: inherit; width: 100%; user-select: none;">
               <strong>${emp.name}</strong> <small style="color:var(--text-muted);">(${emp.role || 'Employé'})</small>
             </label>
           </div>
